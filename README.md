@@ -119,6 +119,20 @@ Para carregar configurações sensíveis (como `OLLAMA_API_KEY` ou `OLLAMA_HOST`
 
 ---
 
+## 📂 Acesse os arquivos do repositório
+
+- [Fluxograma](docs/fluxograma.png)
+- [System Prompt](prompts/system_prompt.md)
+- [Dados mock](data/mock_data.json)
+- [Código principal - app.py](src/app.py)
+- [Lógica do chatbot - chatbot.py](src/chatbot.py)
+- [Modelo de testes](tests/modelo_de_teste.md)
+- [Resultados dos testes](tests/resultados_testes.md)
+- [Requisitos](requirements.txt)
+- [Exemplo de configuração](.env.example)
+
+---
+
 ## Instalação e Execução
 
 ### Pré-requisitos
