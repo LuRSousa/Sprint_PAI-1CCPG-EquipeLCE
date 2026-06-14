@@ -216,7 +216,7 @@ Foram executados 10 casos de teste conforme planejado na Sprint 1, utilizando o 
 ---
 
 ## Vídeo Demonstrativo
-
+https://youtu.be/i_Y-zGGlqRM
 
 O vídeo mostra o chatbot em funcionamento, com pelo menos três interações relevantes ao contexto do EV Challenge 2026.
 
