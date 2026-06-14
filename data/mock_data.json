@@ -1,0 +1,123 @@
+{
+  "sessoes_recarga": [
+    {
+      "id_sessao": "SESS-001",
+      "id_carregador": 1,
+      "status": "ativa",
+      "inicio": "2026-05-15T08:32:00",
+      "fim": null,
+      "energia_kwh": 14.2,
+      "valor_cobrado": null
+    },
+    {
+      "id_sessao": "SESS-002",
+      "id_carregador": 3,
+      "status": "ativa",
+      "inicio": "2026-05-15T06:18:00",
+      "fim": null,
+      "energia_kwh": 38.7,
+      "valor_cobrado": null
+    },
+    {
+      "id_sessao": "SESS-003",
+      "id_carregador": 5,
+      "status": "ativa",
+      "inicio": "2026-05-15T09:45:00",
+      "fim": null,
+      "energia_kwh": 8.9,
+      "valor_cobrado": null
+    },
+    {
+      "id_sessao": "SESS-004",
+      "id_carregador": 1,
+      "status": "concluída",
+      "inicio": "2026-05-15T06:00:00",
+      "fim": "2026-05-15T07:45:00",
+      "energia_kwh": 22.1,
+      "valor_cobrado": 28.73
+    },
+    {
+      "id_sessao": "SESS-005",
+      "id_carregador": 2,
+      "status": "com_falha",
+      "inicio": "2026-05-15T14:30:00",
+      "fim": "2026-05-15T14:37:00",
+      "energia_kwh": 0.3,
+      "valor_cobrado": 0.0
+    }
+  ],
+  "leituras_potencia": [
+    {
+      "id_carregador": 1,
+      "potencia_atual_kw": 18.0,
+      "limite_kw": 40.0,
+      "percentual_uso": 45
+    },
+    {
+      "id_carregador": 2,
+      "potencia_atual_kw": 0.0,
+      "limite_kw": 40.0,
+      "percentual_uso": 0
+    },
+    {
+      "id_carregador": 3,
+      "potencia_atual_kw": 22.0,
+      "limite_kw": 32.0,
+      "percentual_uso": 68
+    },
+    {
+      "id_carregador": 4,
+      "potencia_atual_kw": 0.0,
+      "limite_kw": 32.0,
+      "percentual_uso": 0
+    },
+    {
+      "id_carregador": 5,
+      "potencia_atual_kw": 11.0,
+      "limite_kw": 32.0,
+      "percentual_uso": 34
+    }
+  ],
+  "alertas": [
+    {
+      "tipo": "sessao_prolongada",
+      "id_carregador": 3,
+      "timestamp": "2026-05-15T09:14:00",
+      "descricao": "Sessão ativa há 4h12min. Duração média do posto: 1h45min.",
+      "nivel": "aviso"
+    },
+    {
+      "tipo": "falha_comunicacao",
+      "id_carregador": 2,
+      "timestamp": "2026-05-15T14:37:00",
+      "descricao": "Carregador offline — sem resposta ao heartbeat OCPP há 47 minutos.",
+      "nivel": "critico"
+    }
+  ],
+  "faturamento": {
+    "atual": {
+      "periodo": "maio/2026",
+      "total_sessoes": 312,
+      "total_kwh": 4820.0,
+      "receita_total": 6248.00,
+      "ticket_medio": 20.03
+    },
+    "anterior": {
+      "periodo": "abril/2026",
+      "total_sessoes": 289,
+      "total_kwh": 4432.0,
+      "receita_total": 5890.00,
+      "ticket_medio": 20.38
+    }
+  },
+  "historico_demanda_semanal": {
+    "sessoes_total": 74,
+    "duracao_media_min": 108,
+    "energia_total_kwh": 1124.0,
+    "carregador_mais_usado": 1,
+    "sessoes_carregador_mais_usado": 22,
+    "horarios_pico": ["07:00-09:00", "17:00-20:00"],
+    "horarios_vale": ["10:00-12:00", "21:00-23:00"],
+    "percentual_demanda_vale": 32
+  }
+}
