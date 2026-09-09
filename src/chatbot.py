@@ -5,6 +5,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 import ollama
 
+# Bibliotecas pós-refatoração
+import time
+import tiktoken
+
+# Objeto encoder/tokenizer
+enc = tiktoken.get_encoding("cl100k_base")
+
 # Carrega variáveis do arquivo .env
 load_dotenv()
 
@@ -152,15 +159,33 @@ class ChargeGridChatbot:
 
         self._historico.append({"role": "user", "content": mensagem_com_contexto})
 
+        tokens_entrada = len(enc.encode(mensagem_com_contexto))
+        inicio = time.perf_counter()
+        
         # ⭐ CORREÇÃO 3: Usa o cliente configurado (nuvem ou local)
         resposta = self._client.chat(
             model=self._modelo,
             messages=self._historico,
             options={"temperature": 0.3, "num_predict": 1024},
         )
+        
+        fim = time.perf_counter()
 
+        # Cálculo da latência para resposta ferada pelo modelo
+        latencia = fim - inicio
+        
         texto = resposta.message.content
-
+        
+        tokens_saida = len(enc.encode(texto))
+        
+        # Contagem de tokens de saída
+        tokens_total = tokens_entrada + tokens_saida
+        
+        print(f"Tokens de entrada: {tokens_entrada}")
+        print(f"Tokens de saída: {tokens_saida}")
+        print(f"Tokens totais: {tokens_total}")
+        print(f"Latência do turno {self._turno}: {latencia:.3f} segundos")
+        
         self._historico.append({"role": "assistant", "content": texto})
 
         self._historico_interno.append({
@@ -168,6 +193,7 @@ class ChargeGridChatbot:
             "timestamp": datetime.now().isoformat(),
             "usuario": mensagem_usuario,
             "assistente": texto,
+            "latencia_segundos": latencia,  
         })
 
         # ⭐ CORREÇÃO 5: Limita o histórico para evitar estouro de contexto
