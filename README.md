@@ -144,7 +144,7 @@ Para carregar configurações sensíveis (como `OLLAMA_API_KEY` ou `OLLAMA_HOST`
 
 1. **Clone o repositório**
   ```bash
-    git clone https://github.com/SEU_USUARIO/ChargeGrid-Assistant.git
+    https://github.com/LuRSousa/Sprint_PAI-1CCPG-EquipeLCE.git
   ```
 
 2. **Crie e ative um ambiente virtual**
