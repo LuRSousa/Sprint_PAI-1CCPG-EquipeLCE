@@ -181,10 +181,13 @@ class ChargeGridChatbot:
         # Contagem de tokens de saída
         tokens_total = tokens_entrada + tokens_saida
         
+        print(f"="*35)
+        print(f"Turno:{self._turno}")
         print(f"Tokens de entrada: {tokens_entrada}")
         print(f"Tokens de saída: {tokens_saida}")
         print(f"Tokens totais: {tokens_total}")
-        print(f"Latência do turno {self._turno}: {latencia:.3f} segundos")
+        print(f"Latência do turno: {latencia:.3f} segundos")
+        print(f"="*35)
         
         self._historico.append({"role": "assistant", "content": texto})
 

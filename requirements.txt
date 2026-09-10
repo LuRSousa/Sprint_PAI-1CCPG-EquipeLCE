@@ -12,3 +12,12 @@ python-dotenv>=1.0.0
 
 # Biblioteca de tokenização - Contador de tokens
 tiktoken==0.14.0
+
+# Conexão do langchain com provedor Ollama
+langchain_ollama==1.1.0
+
+# Framework Langchain
+langchain-classic==1.0.8
+
+# Langchain-core
+langchain-core==1.6.2
