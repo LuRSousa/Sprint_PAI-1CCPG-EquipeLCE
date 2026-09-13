@@ -7,6 +7,9 @@
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser 
+from langchain_classic.memory import ConversationTokenBufferMemory
+# from langchain_classic.chains import ConversationChain
+
 import ollama
 from pathlib import Path
 import json
@@ -39,9 +42,12 @@ prompt = ChatPromptTemplate.from_messages([
     ("system", _carregar_system_prompt()
      + "\n\n"
      + "Contexto_operacional>\n"
-     + "{contexto}\n"),
+     + "{contexto}\n"
+     ),
     
-    ("human", "Pergunta do operador: {pergunta}"),
+    ("placeholder", "{history}"),
+    
+    ("human", "Pergunta do operador: {pergunta}")
     
 ])
 
@@ -62,10 +68,42 @@ parser = StrOutputParser()
 # 4. Composição da Chain    
 chain = prompt | llm | parser
 
-# TESTE: Invocar a chain com as variáveis do template
-resposta = chain.invoke({
-    "contexto":      _carregar_dados_mock(),
-    "pergunta":      "E o consumo, como está?",
-})
-print(resposta)
+# 5. Declaração da Memória TokenBuffer
+memoria_token = ConversationTokenBufferMemory(
+    llm = llm,
+    max_token_limit = 800,
+    memory_key = "history",
+    return_messages = True,
+)
 
+# TESTE: Invocar a chain com as variáveis do template
+while True:
+
+    pergunta = input("\nDigite sua pergunta (ou 'sair'): ")
+
+    if pergunta.lower() == "sair":
+        break
+
+    # Recupera somente o histórico
+    memoria = memoria_token.load_memory_variables({})
+    history = memoria["history"]
+
+    # Executa a chain
+    resposta = chain.invoke({
+        "contexto": _carregar_dados_mock(),
+        "history": history,
+        "pergunta": pergunta,
+    })
+
+    # Exibe resposta
+    print("\nChargeGrid Assistant:")
+    print(resposta)
+
+    # Salva pergunta + resposta na memória
+    memoria_token.save_context(
+        {"pergunta": pergunta},
+        {"resposta": resposta}
+    )
+    
+    print(f"Mensagens no buffer: {len(memoria['history'])}")
+    

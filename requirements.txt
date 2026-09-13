@@ -21,3 +21,6 @@ langchain-classic==1.0.8
 
 # Langchain-core
 langchain-core==1.6.2
+
+# Transformers
+transformers==5.17.0
