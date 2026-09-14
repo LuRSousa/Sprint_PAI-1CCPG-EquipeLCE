@@ -2,12 +2,15 @@
 
 '''
 1. PROBLEMA: Após a injeção do mock_data.json, o modelo passou a não corresponder o resultado esperado no teste 9 (Pergunta Ambígua)
+2. PROBLEMA: A llm porder perder o contexto do primeiro turno de conversa após poucos turnos depenendo da saída que ela produz (relatórios de anomalias, por exemplo, consomem muitos tokens)
 '''
 
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser 
-import ollama
+from memoria import criar_memoria, obter_historico, salvar_turno
+# from langchain_classic.chains import ConversationChain
+
 from pathlib import Path
 import json
 
@@ -21,6 +24,7 @@ api_key = os.getenv("OLLAMA_API_KEY")
 
 def _carregar_system_prompt() -> str:
     """Carrega o system prompt do arquivo prompts/system_prompt.md."""
+    
     base = Path(__file__).resolve().parent.parent.parent
     with open(base / "prompts" / "system_prompt.md", "r", encoding="utf-8") as f:
         return f.read()
@@ -28,20 +32,25 @@ def _carregar_system_prompt() -> str:
     
 def _carregar_dados_mock() -> str:
     """Carrega os dados mock operacionais do arquivo data/mock_data.json."""
+    
     base = Path(__file__).resolve().parent.parent.parent
     with open(base / "data" / "mock_data.json", "r", encoding="utf-8") as f:
         dados = json.load(f)
         
     return json.dumps(dados, ensure_ascii=False, indent=2)
+
 # 1. Template: define estrutura e variáveis do prompt
 prompt = ChatPromptTemplate.from_messages([
     
     ("system", _carregar_system_prompt()
      + "\n\n"
      + "Contexto_operacional>\n"
-     + "{contexto}\n"),
+     + "{contexto}\n"
+     ),
     
-    ("human", "Pergunta do operador: {pergunta}"),
+    ("placeholder", "{history}"),
+    
+    ("human", "Pergunta do operador: {pergunta}")
     
 ])
 
@@ -62,10 +71,33 @@ parser = StrOutputParser()
 # 4. Composição da Chain    
 chain = prompt | llm | parser
 
-# TESTE: Invocar a chain com as variáveis do template
-resposta = chain.invoke({
-    "contexto":      _carregar_dados_mock(),
-    "pergunta":      "E o consumo, como está?",
-})
-print(resposta)
+# 5. Cria memória conversacional
+memoria_token = criar_memoria(llm)
 
+# TESTE: Invocar a chain com as variáveis do template
+while True:
+
+    pergunta = input("\nDigite sua pergunta (ou 'sair'): ")
+
+    if pergunta.lower() == "sair":
+        break
+
+    # Recupera somente o histórico
+    history = obter_historico(memoria_token)
+
+    # Executa a chain
+    resposta = chain.invoke({
+        "contexto": _carregar_dados_mock(),
+        "history": history,
+        "pergunta": pergunta,
+    })
+
+    # Exibe resposta
+    print("\nChargeGrid Assistant:")
+    print(resposta)
+
+    # Salva pergunta + resposta na memória
+    salvar_turno(memoria_token, pergunta, resposta)
+    
+    print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}")
+    # print(memoria)
