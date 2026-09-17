@@ -9,6 +9,9 @@ from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser 
 from memoria import criar_memoria, obter_historico, salvar_turno
+
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.chat_history import InMemoryChatMessageHistory
 # from langchain_classic.chains import ConversationChain
 
 from pathlib import Path
@@ -58,8 +61,27 @@ parser = StrOutputParser()
 # 4. Composição da Chain    
 chain = prompt | llm | parser
 
-# 5. Cria memória conversacional
+# 5. Histórico por sessão
+historicos = {}
+
+def obter_historico_sessao(session_id):
+
+    if session_id not in historicos:
+        historicos[session_id] = InMemoryChatMessageHistory()
+
+    return historicos[session_id]
+
+# 6. Cria memória conversacional
 memoria_token = criar_memoria(llm)
+
+# 7. Integração do histórico com a chain
+
+chain_com_historico = RunnableWithMessageHistory(
+    chain,
+    obter_historico_sessao(),
+    input_messages_key="pergunta",
+    history_messages_key="history"
+)
 
 # TESTE: Invocar a chain com as variáveis do template
 while True:
@@ -76,16 +98,20 @@ while True:
      
     
     elif classificacao == "nao_estruturada":
-        
-        # Recupera somente o histórico
-        history = obter_historico(memoria_token)
 
         # Executa a chain
-        resposta = chain.invoke({
-            "contexto": _carregar_dados_mock(),
-            "history": history,
-            "pergunta": pergunta,
-        })
+        resposta = chain_com_historico.invoke(
+            {
+                "contexto": _carregar_dados_mock(),
+                "pergunta": pergunta,
+            },
+            config = {
+                "configurable": {
+                    "session_id": "chargegrid"
+                }
+            }
+                                              
+        )
 
         # Exibe resposta
         print("\nChargeGrid Assistant:")

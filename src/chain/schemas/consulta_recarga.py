@@ -5,16 +5,16 @@ from typing import Literal
 class ConsultaSessoesSemana(BaseModel):
     
     num_sessoes:                    int     = Field(
-        default=0, descrption="Número de sessões registradas na semana corrente"
+        default=0, description="Número de sessões registradas na semana corrente"
         )
     duracao_media:                  str     = Field(
-        default=0, description="Duração média no formato hh/mm das sessões registradas na semana corrente"
+        default="00/00", description="Duração média no formato hh/mm das sessões registradas na semana corrente"
         )
     energia_fornecida:              float   = Field(
         default=0, description="Total de energia fornecida por todos os carregadores na semana corrente na unidade kWh"
         )
-    carregador_mais_usado:          int     = Field(
-        defaul=None, description="ID do carregador que apresenta o maior número de sessões na semana corrente"
+    carregador_mais_usado:          int | None    = Field(
+        default=None, description="ID do carregador que apresenta o maior número de sessões na semana corrente"
         )
     sessoes_carregador_mais_usado:  int     = Field(
         default=0, description="Número de sessões do carregador que teve maior número de sessões na semana corrente"
@@ -26,10 +26,19 @@ class ConsultaSessoesSemana(BaseModel):
     @field_validator("carregador_mais_usado")
     @classmethod
     def validar_carregador(cls, carregador):
-        if carregador < 1 or carregador > 5:
-            raise ValueError("Status de sessão inválido")
+        if carregador is not None and (carregador < 1 or carregador > 5):
+            raise ValueError("ID de carregador inválido")
         return carregador
+    
+    @field_validator("percentual_sessoes_carregador_mais_usado")
+    @classmethod
+    def validar_percentual(cls, percentual):
+        if not 0 <= percentual <= 100:
+            raise ValueError(
+                "O percentual deve estar entre 0 e 100"
+            )
 
+        return percentual
 
 class RotaConsulta(BaseModel):
     classificacao: Literal["estruturada", "nao_estruturada"]
