@@ -17,6 +17,8 @@ import json
 from dotenv import load_dotenv
 import os
 
+from router import classificar_prompt
+
 load_dotenv()
 
 model = os.getenv("OLLAMA_MODEL")
@@ -79,25 +81,36 @@ while True:
 
     pergunta = input("\nDigite sua pergunta (ou 'sair'): ")
 
+    classificacao = classificar_prompt(llm, pergunta)
+
+    print(f"\nPergunta: {pergunta}")
+    print(f"Rota escolhida: {classificacao}")
+
     if pergunta.lower() == "sair":
         break
-
-    # Recupera somente o histórico
-    history = obter_historico(memoria_token)
-
-    # Executa a chain
-    resposta = chain.invoke({
-        "contexto": _carregar_dados_mock(),
-        "history": history,
-        "pergunta": pergunta,
-    })
-
-    # Exibe resposta
-    print("\nChargeGrid Assistant:")
-    print(resposta)
-
-    # Salva pergunta + resposta na memória
-    salvar_turno(memoria_token, pergunta, resposta)
+     
     
-    print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}")
-    # print(memoria)
+    elif classificacao == "nao_estruturada":
+        
+        # Recupera somente o histórico
+        history = obter_historico(memoria_token)
+
+        # Executa a chain
+        resposta = chain.invoke({
+            "contexto": _carregar_dados_mock(),
+            "history": history,
+            "pergunta": pergunta,
+        })
+
+        # Exibe resposta
+        print("\nChargeGrid Assistant:")
+        print(resposta)
+
+        # Salva pergunta + resposta na memória
+        salvar_turno(memoria_token, pergunta, resposta)
+        
+        print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}")
+        # print(memoria)
+    
+    elif classificacao == "estruturada":
+        print("Teste")
