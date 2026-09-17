@@ -19,6 +19,9 @@ class ConsultaSessoesSemana(BaseModel):
     sessoes_carregador_mais_usado:  int     = Field(
         default=0, description="Número de sessões do carregador que teve maior número de sessões na semana corrente"
         )
+    percentual_sessoes_carregador_mais_usado:  float     = Field(
+        default=0, description="Percentual do número de sessões realizadas pelo carregador com mais sessões na semana em relação ao número total de sessões da semana corrente"
+        )
     
     @field_validator("carregador_mais_usado")
     @classmethod

@@ -18,28 +18,13 @@ from dotenv import load_dotenv
 import os
 
 from router import classificar_prompt
+from structured_builder import executar_chain_estruturada
+from recursos import _carregar_system_prompt, _carregar_dados_mock
 
 load_dotenv()
 
 model = os.getenv("OLLAMA_MODEL")
 api_key = os.getenv("OLLAMA_API_KEY")
-
-def _carregar_system_prompt() -> str:
-    """Carrega o system prompt do arquivo prompts/system_prompt.md."""
-    
-    base = Path(__file__).resolve().parent.parent.parent
-    with open(base / "prompts" / "system_prompt.md", "r", encoding="utf-8") as f:
-        return f.read()
-    
-    
-def _carregar_dados_mock() -> str:
-    """Carrega os dados mock operacionais do arquivo data/mock_data.json."""
-    
-    base = Path(__file__).resolve().parent.parent.parent
-    with open(base / "data" / "mock_data.json", "r", encoding="utf-8") as f:
-        dados = json.load(f)
-        
-    return json.dumps(dados, ensure_ascii=False, indent=2)
 
 # 1. Template: define estrutura e variáveis do prompt
 prompt = ChatPromptTemplate.from_messages([
@@ -113,4 +98,15 @@ while True:
         # print(memoria)
     
     elif classificacao == "estruturada":
-        print("Teste")
+        
+        history = obter_historico(memoria_token)
+        resposta = executar_chain_estruturada(history, pergunta)
+        # Exibe resposta
+        print("\nChargeGrid Assistant:")
+        print(resposta)
+
+        # Salva pergunta + resposta na memória
+        salvar_turno(memoria_token, pergunta, resposta)
+        
+        print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}")
+        # print(memoria)
