@@ -1,6 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_ollama import ChatOllama
+from langchain_core.exceptions import OutputParserException
 
 from schemas.consulta_recarga import ConsultaSessoesSemana 
 from recursos import _carregar_dados_mock, _carregar_system_prompt
@@ -42,19 +43,23 @@ chain_pydantic = prompt | llm | parser_pydantic
 
 def executar_chain_estruturada(history, pergunta):
  
-    resposta = chain_pydantic.invoke({
-        "contexto": _carregar_dados_mock(),
-        "history": history,
-        "pergunta": pergunta,
-    })
-    
-    resposta_formatada = f'''
-        Nesta semana foram registradas {resposta.num_sessoes} sessões de recarga,
-        com duração média de {resposta.duracao_media} por sessão.
+    try: 
+        resposta = chain_pydantic.invoke({
+            "contexto": _carregar_dados_mock(),
+            "history": history,
+            "pergunta": pergunta,
+        })
+        
+        resposta_formatada = f'''
+            Nesta semana foram registradas {resposta.num_sessoes} sessões de recarga,
+            com duração média de {resposta.duracao_media} por sessão.
 
-        Total de energia fornecida na semana: {resposta.energia_fornecida} kWh.
-        O carregador mais utilizado foi o carregador {resposta.carregador_mais_usado},
-        com {resposta.sessoes_carregador_mais_usado} sessões ({resposta.percentual_sessoes_carregador_mais_usado}% do total).
-    '''
-    
-    return resposta_formatada
+            Total de energia fornecida na semana: {resposta.energia_fornecida} kWh.
+            O carregador mais utilizado foi o carregador {resposta.carregador_mais_usado},
+            com {resposta.sessoes_carregador_mais_usado} sessões ({resposta.percentual_sessoes_carregador_mais_usado}% do total).
+        '''
+        
+        return resposta_formatada
+            
+    except OutputParserException: 
+        return "Não foi possível gerar a resposta estruturada para essa consulta"
