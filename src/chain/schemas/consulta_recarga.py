@@ -8,7 +8,7 @@ class ConsultaSessoesSemana(BaseModel):
         default=0, description="Número de sessões registradas na semana corrente"
         )
     duracao_media:                  str     = Field(
-        default="00/00", description="Duração média no formato hh/mm das sessões registradas na semana corrente"
+        default="00/00", description="Duração média no formato hh h mm min (ou seja, xxhyymin, se a média for mais que uma hora) ou mm min (ou seja, xxmin, se a média for menor que uma hora) das sessões registradas na semana corrente"
         )
     energia_fornecida:              float   = Field(
         default=0, description="Total de energia fornecida por todos os carregadores na semana corrente na unidade kWh"

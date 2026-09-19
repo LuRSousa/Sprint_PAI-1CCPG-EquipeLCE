@@ -14,12 +14,7 @@ from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser 
 from memoria import criar_memoria, obter_historico, salvar_turno
-
-from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.chat_history import InMemoryChatMessageHistory
 # from langchain_classic.chains import ConversationChain
-
-from pathlib import Path
 
 from dotenv import load_dotenv
 import os
