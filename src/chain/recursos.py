@@ -5,7 +5,7 @@ def _carregar_system_prompt() -> str:
     """Carrega o system prompt do arquivo prompts/system_prompt.md."""
     
     base = Path(__file__).resolve().parent.parent.parent
-    with open(base / "prompts" / "system_prompt.md", "r", encoding="utf-8") as f:
+    with open(base / "prompts" / "system_prompt_v1.md", "r", encoding="utf-8") as f:
         return f.read()
     
     

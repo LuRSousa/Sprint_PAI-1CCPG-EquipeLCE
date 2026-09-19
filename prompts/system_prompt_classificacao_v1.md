@@ -1,0 +1,1 @@
+Classifique se o usuário está pedindo por um relatório das sessões da semana corrente

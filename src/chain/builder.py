@@ -31,6 +31,7 @@ from recursos import _carregar_system_prompt, _carregar_dados_mock
 load_dotenv()
 
 model = os.getenv("OLLAMA_MODEL")
+model_router = os.getenv("OLLAMA_MODEL_ROUTER")
 api_key = os.getenv("OLLAMA_API_KEY")
 
 # 1. Template: define estrutura e variáveis do prompt
@@ -50,7 +51,7 @@ prompt = ChatPromptTemplate.from_messages([
 
 ])
 
-# 2. Modelo: conecta ao Ollama Cloud
+# 2. Conexões do modelo principal e de classificação de user prompt ao Ollama Cloud
 
 llm = ChatOllama(
     
@@ -63,16 +64,24 @@ llm = ChatOllama(
     }
 )
 
-# 3. Parser: extrai só o texto da resposta
+llm_router = ChatOllama(
+    
+    model=model_router,
+    base_url="https://ollama.com",
+    client_kwargs={
+        "headers": {
+            "Authorization": f"Bearer {api_key}"
+        }
+    }
+)
 
+# 3. Parser: extrai só o texto da resposta
 parser = StrOutputParser()
 
 # 4. Composição da Chain
-
 chain = prompt | llm | parser
 
 # 5. Cria memória conversacional
-
 memoria_token = criar_memoria(llm)
 
 # TESTE: Invocar a chain com as variáveis do template
@@ -81,7 +90,7 @@ while True:
 
     pergunta = input("\nDigite sua pergunta (ou 'sair'): ")
 
-    classificacao = classificar_prompt(llm, pergunta)
+    classificacao = classificar_prompt(llm_router, pergunta)
 
     print(f"\nPergunta: {pergunta}")
 
