@@ -41,8 +41,13 @@ client_kwargs={
 
 chain_pydantic = prompt | llm | parser_pydantic
 
-def executar_chain_estruturada(history, pergunta):
- 
+def executar_chain_estruturada(history, pergunta)->str:
+    '''
+    Quando chamada, executa uma chain diferente da chain conversacional, retornando uma string padronizada contendo 
+    os dados dos campos do schema Pydantic ConsultaSessoesSemana. Trata exceção de OutputParser (campos obrigatórios
+    no schema não preenchidos, por exemplo)
+    '''
+    
     try: 
         resposta = chain_pydantic.invoke({
             "contexto": _carregar_dados_mock(),

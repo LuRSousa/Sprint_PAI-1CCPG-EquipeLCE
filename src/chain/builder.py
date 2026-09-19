@@ -1,6 +1,8 @@
 # OBSERVAÇÕES
 
 '''
+PROBLEMAS: 
+
 1. PROBLEMA: Após a injeção do mock_data.json, o modelo passou a não corresponder o resultado esperado no teste 9 
    (Pergunta Ambígua)
 2. PROBLEMA: A llm porder perder o contexto do primeiro turno de conversa após poucos turnos depenendo da saída 
@@ -8,8 +10,8 @@
 3. PROBLEMA: O prompt v1 do router direciona (ás vezes) a resposta de "Alguma anomalia foi registrada essa semana?"
    para a chain estruturada (devia ser nao_estruturada). Já retornou a respota correta, mas fora do schema e já 
    retornou a resposta estruturada que não responde à pergunta Melhorar prompt v1
-'''
 
+'''
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser 
@@ -47,7 +49,6 @@ prompt = ChatPromptTemplate.from_messages([
 ])
 
 # 2. Conexões do modelo principal e de classificação de user prompt ao Ollama Cloud
-
 llm = ChatOllama(
     
     model=model,
@@ -73,32 +74,30 @@ llm_router = ChatOllama(
 # 3. Parser: extrai só o texto da resposta
 parser = StrOutputParser()
 
-# 4. Composição da Chain
+# 4. Composição da Chain conversacional
 chain = prompt | llm | parser
 
 # 5. Cria memória conversacional
 memoria_token = criar_memoria(llm)
 
 # TESTE: Invocar a chain com as variáveis do template
-
 while True:
 
     pergunta = input("\nDigite sua pergunta (ou 'sair'): ")
 
     classificacao = classificar_prompt(llm_router, pergunta)
 
-    print(f"\nPergunta: {pergunta}")
-
-    print(f"Rota escolhida: {classificacao}")
+    print(f"\nPergunta: {pergunta}") # !! Monitoramento
+    print(f"Rota escolhida: {classificacao}") # !! Monitoramento
 
     if pergunta.lower() == "sair":
 
         break
 
-    elif classificacao == "nao_estruturada":
+    elif classificacao == "nao_estruturada": # executa chain conversacional
 
         # Recupera somente o histórico
-        history = obter_historico(memoria_token)
+        history = obter_historico(memoria_token) 
 
         # Executa a chain
         resposta = chain.invoke({
@@ -110,27 +109,28 @@ while True:
         })
 
         # Exibe resposta
-
         print("\nChargeGrid Assistant:")
-        print(resposta)
+        print(resposta) # !! Monitoramento
 
         # Salva pergunta + resposta na memória
         salvar_turno(memoria_token, pergunta, resposta)
 
-        print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}")
-        # print(memoria)
+        print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}") # !! Monitoramento
+        # print(memoria) # !! Monitoramento
 
-    elif classificacao == "estruturada":
+    elif classificacao == "estruturada": # executa chain estruturada (Pydantic)
 
         history = obter_historico(memoria_token)
         resposta = executar_chain_estruturada(history, pergunta)
 
         # Exibe resposta
         print("\nChargeGrid Assistant:")
-        print(resposta)
+        print(resposta) # !! Monitoramento
 
         # Salva pergunta + resposta na memória
         salvar_turno(memoria_token, pergunta, resposta)
         print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}")
 
         # print(memoria)
+    
+    else: print("Tivemos um problema em processar sua mensagem! Por favor, reenvie-a.") # !! Monitoramento

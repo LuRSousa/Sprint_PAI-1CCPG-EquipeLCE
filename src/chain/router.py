@@ -12,7 +12,11 @@ if str(SRC_DIR) not in sys.path:
 from recursos import _carregar_router_system_prompt
 from schemas.consulta_recarga import RotaConsulta
 
-def classificar_prompt(llm, pergunta): 
+def classificar_prompt(llm, pergunta) -> str: 
+    '''Ecxecuta uma chain dedicada à classificar o user prompt, determinando se ele está pedindo por informações 
+    das sessões de recarga da semana correte ou não. Devolve uma string (validada por um schema Pydantic)
+    para o builder.py.
+    '''
     
     parser = PydanticOutputParser(pydantic_object=RotaConsulta)
 
