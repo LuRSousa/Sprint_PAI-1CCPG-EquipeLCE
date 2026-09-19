@@ -1,6 +1,15 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 
+import sys
+from pathlib import Path
+
+# Adiciona a pasta raiz 'src' ao sys.path
+SRC_DIR = Path(__file__).resolve().parent.parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.append(str(SRC_DIR))
+
+from recursos import _carregar_router_system_prompt
 from schemas.consulta_recarga import RotaConsulta
 
 def classificar_prompt(llm, pergunta): 
@@ -9,7 +18,7 @@ def classificar_prompt(llm, pergunta):
 
     prompt = ChatPromptTemplate.from_messages([
         
-        ("system", "Classifique se o usuário está pedindo por um relatório das sessões da semana corrente.\n{format_instructions}"
+        ("system", _carregar_router_system_prompt() + ".\n{format_instructions}"
         ),
             
         ("human", "Pergunta do operador: {pergunta}")
