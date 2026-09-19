@@ -61,5 +61,5 @@ def executar_chain_estruturada(history, pergunta):
         
         return resposta_formatada
             
-    except OutputParserException: 
+    except OutputParserException: # Como a saída vai ser consumida apenas pelo usuário, apenas retorna uma mensagem de erro sem encerrar sessão
         return "Não foi possível gerar a resposta estruturada para essa consulta"
