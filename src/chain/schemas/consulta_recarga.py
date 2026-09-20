@@ -3,6 +3,11 @@ from typing import Literal
 
 
 class ConsultaSessoesSemana(BaseModel):
+    '''Schema Pydantic com 2 field validators. Utilizado quando router.py classificar o input do usuário como 
+    "estruturada", contendo número de sessões, duração média, total de energia fornecdia, carregador mais usado na 
+    semana, número de sessões realizados por ele e o quanto elas representam do número total de sessões realizadas na
+    semana.
+    '''
     
     num_sessoes:                    int     = Field(
         default=0, description="Número de sessões registradas na semana corrente"
@@ -41,4 +46,7 @@ class ConsultaSessoesSemana(BaseModel):
         return percentual
 
 class RotaConsulta(BaseModel):
+    '''Shema Pydantic usado pelo router.py para validar se sua saída uma string, com 2 valores possíveis:
+    "estruturada" ou "nao_estruturada"
+    '''
     classificacao: Literal["estruturada", "nao_estruturada"]

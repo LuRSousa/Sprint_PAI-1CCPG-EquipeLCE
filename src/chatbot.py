@@ -19,7 +19,7 @@ load_dotenv()
 def _carregar_system_prompt() -> str:
     """Carrega o system prompt do arquivo prompts/system_prompt.md."""
     base = Path(__file__).resolve().parent.parent
-    with open(base / "prompts" / "system_prompt.md", "r", encoding="utf-8") as f:
+    with open(base / "prompts" / "system_prompts" / "system_prompt_v2.md", "r", encoding="utf-8") as f:
         return f.read()
 
 
@@ -156,10 +156,23 @@ class ChargeGridChatbot:
             f"{_formatar_contexto_operacional(self._dados_mock)}\n\n"
             f"Pergunta do operador: {mensagem_usuario}"
         )
+        
+        # Histórico ANTES do turno atual
+        texto_historico = "\n".join(
+            mensagem["content"]
+            for mensagem in self._historico[1:] 
+        ) # Início: segunto elemento elemento de conteúdo porque o primeiro é o system prompt (não considerado na metodologia contabilização de tokens)
+    
+        texto_entrada = (
+            f"{texto_historico}\n"
+            f"{_formatar_contexto_operacional(self._dados_mock)}\n"
+            f"Pergunta do operador: {mensagem_usuario}"
+        )
+
+        tokens_entrada = len(enc.encode(texto_entrada))
 
         self._historico.append({"role": "user", "content": mensagem_com_contexto})
-
-        tokens_entrada = len(enc.encode(mensagem_com_contexto))
+        
         inicio = time.perf_counter()
         
         # ⭐ CORREÇÃO 3: Usa o cliente configurado (nuvem ou local)
