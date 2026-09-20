@@ -4,10 +4,15 @@ from langchain_ollama import ChatOllama
 from langchain_core.exceptions import OutputParserException
 
 from schemas.consulta_recarga import ConsultaSessoesSemana 
-from recursos import _carregar_dados_mock, _carregar_system_prompt
+from recursos import _carregar_dados_mock, _carregar_system_prompt, _formatar_contexto_operacional, contar_tokens_entrada
 
 from dotenv import load_dotenv
 import os
+
+import tiktoken
+
+# Objeto encoder/tokenizer
+enc = tiktoken.get_encoding("cl100k_base")
 
 load_dotenv()
 
@@ -39,7 +44,7 @@ client_kwargs={
 }
 )
 
-chain_pydantic = prompt | llm | parser_pydantic
+chain_pydantic = prompt | llm 
 
 def executar_chain_estruturada(history, pergunta)->str:
     '''
@@ -49,11 +54,18 @@ def executar_chain_estruturada(history, pergunta)->str:
     '''
     
     try: 
+        
+        tokens_entrada = contar_tokens_entrada(history, pergunta, prompt)
+        
         resposta = chain_pydantic.invoke({
             "contexto": _carregar_dados_mock(),
             "history": history,
             "pergunta": pergunta,
         })
+        
+        tokens_saida = len(enc.encode(resposta.content))
+        
+        resposta = parser_pydantic.invoke(resposta)
         
         resposta_formatada = f'''
             Nesta semana foram registradas {resposta.num_sessoes} sessões de recarga,
@@ -64,7 +76,7 @@ def executar_chain_estruturada(history, pergunta)->str:
             com {resposta.sessoes_carregador_mais_usado} sessões ({resposta.percentual_sessoes_carregador_mais_usado}% do total).
         '''
         
-        return resposta_formatada
+        return (resposta_formatada, tokens_entrada, tokens_saida)
             
     except OutputParserException: # Como a saída vai ser consumida apenas pelo usuário, apenas retorna uma mensagem de erro sem encerrar sessão
-        return "Não foi possível gerar a resposta estruturada para essa consulta"
+        return ("Não foi possível gerar a resposta estruturada para essa consulta", 0, 0)

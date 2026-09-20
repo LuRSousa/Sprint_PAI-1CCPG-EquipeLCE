@@ -23,13 +23,22 @@ import os
 
 from router import classificar_prompt
 from structured_builder import executar_chain_estruturada
-from recursos import _carregar_system_prompt, _carregar_dados_mock
+from recursos import _carregar_system_prompt, _carregar_dados_mock, _formatar_contexto_operacional, contar_tokens_entrada
+
+import time
+import tiktoken
+
+# Objeto encoder/tokenizer
+enc = tiktoken.get_encoding("cl100k_base")
 
 load_dotenv()
 
 model = os.getenv("OLLAMA_MODEL")
 model_router = os.getenv("OLLAMA_MODEL_ROUTER")
 api_key = os.getenv("OLLAMA_API_KEY")
+    
+# Dados do mock
+contexto_operacional = _carregar_dados_mock()
 
 # 1. Template: define estrutura e variáveis do prompt
 prompt = ChatPromptTemplate.from_messages([
@@ -84,8 +93,12 @@ memoria_token = criar_memoria(llm)
 while True:
 
     pergunta = input("\nDigite sua pergunta (ou 'sair'): ")
-
+    
+    inicio_router = time.perf_counter()
+    
     classificacao = classificar_prompt(llm_router, pergunta)
+
+    latencia_router = time.perf_counter() - inicio_router
 
     print(f"\nPergunta: {pergunta}") # !! Monitoramento
     print(f"Rota escolhida: {classificacao}") # !! Monitoramento
@@ -98,7 +111,10 @@ while True:
 
         # Recupera somente o histórico
         history = obter_historico(memoria_token) 
-
+        
+        tokens_entrada = contar_tokens_entrada(history, pergunta, prompt)
+        inicio_resposta = time.perf_counter()
+        
         # Executa a chain
         resposta = chain.invoke({
 
@@ -107,7 +123,12 @@ while True:
             "pergunta": pergunta,
 
         })
-
+        
+        latencia_resposta = time.perf_counter() - inicio_resposta
+        latencia_total = latencia_router + latencia_resposta
+        
+        tokens_saida = len(enc.encode(resposta))
+        
         # Exibe resposta
         print("\nChargeGrid Assistant:")
         print(resposta) # !! Monitoramento
@@ -117,12 +138,27 @@ while True:
 
         print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}") # !! Monitoramento
         # print(memoria) # !! Monitoramento
+        
+        print("\n--- Métricas ---")
+        print(f"Latência router: {latencia_router:.3f} s")
+        print(f"Latência resposta: {latencia_resposta:.3f} s")
+        print(f"Latência total: {latencia_total:.3f} s")
+        print(f"Tokens entrada: {tokens_entrada}")
+        print(f"Tokens saída: {tokens_saida}")
 
     elif classificacao == "estruturada": # executa chain estruturada (Pydantic)
 
         history = obter_historico(memoria_token)
-        resposta = executar_chain_estruturada(history, pergunta)
-
+        
+        inicio_resposta = time.perf_counter()
+        
+        dados_chain_estruturada = executar_chain_estruturada(history, pergunta)
+        
+        resposta, tokens_entrada, tokens_saida = dados_chain_estruturada
+        
+        latencia_resposta = time.perf_counter() - inicio_resposta
+        latencia_total = latencia_router + latencia_resposta
+        
         # Exibe resposta
         print("\nChargeGrid Assistant:")
         print(resposta) # !! Monitoramento
@@ -132,5 +168,12 @@ while True:
         print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}")
 
         # print(memoria)
+        
+        print("\n--- Métricas ---")
+        print(f"Latência router: {latencia_router:.3f} s")
+        print(f"Latência resposta: {latencia_resposta:.3f} s")
+        print(f"Latência total: {latencia_total:.3f} s")
+        print(f"Tokens entrada: {tokens_entrada}")
+        print(f"Tokens saída: {tokens_saida}. Total = {tokens_entrada + tokens_saida}")
     
     else: print("Tivemos um problema em processar sua mensagem! Por favor, reenvie-a.") # !! Monitoramento
