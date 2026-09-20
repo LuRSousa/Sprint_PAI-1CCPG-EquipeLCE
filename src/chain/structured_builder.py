@@ -36,6 +36,7 @@ prompt = ChatPromptTemplate.from_messages([
 
 llm = ChatOllama(
 model=model,
+num_precit = 1024,
 base_url="https://ollama.com",
 client_kwargs={
     "headers": {
@@ -55,10 +56,12 @@ def executar_chain_estruturada(history, pergunta)->str:
     
     try: 
         
-        tokens_entrada = contar_tokens_entrada(history, pergunta, prompt)
+        dados_mock = _carregar_dados_mock()
+        
+        tokens_entrada = contar_tokens_entrada(history, pergunta, dados_mock)
         
         resposta = chain_pydantic.invoke({
-            "contexto": _carregar_dados_mock(),
+            "contexto": _formatar_contexto_operacional(dados_mock),
             "history": history,
             "pergunta": pergunta,
         })

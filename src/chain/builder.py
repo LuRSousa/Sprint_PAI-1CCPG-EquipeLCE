@@ -23,7 +23,7 @@ import os
 
 from router import classificar_prompt
 from structured_builder import executar_chain_estruturada
-from recursos import _carregar_system_prompt, _carregar_dados_mock, _formatar_contexto_operacional, contar_tokens_entrada
+from recursos import _carregar_system_prompt, _carregar_dados_mock, contar_tokens_entrada
 
 import time
 import tiktoken
@@ -38,7 +38,7 @@ model_router = os.getenv("OLLAMA_MODEL_ROUTER")
 api_key = os.getenv("OLLAMA_API_KEY")
     
 # Dados do mock
-contexto_operacional = _carregar_dados_mock()
+dados_mock = _carregar_dados_mock()
 
 # 1. Template: define estrutura e variáveis do prompt
 prompt = ChatPromptTemplate.from_messages([
@@ -62,6 +62,7 @@ llm = ChatOllama(
     
     model=model,
     base_url="https://ollama.com",
+    num_predict=1024,
     client_kwargs={
         "headers": {
             "Authorization": f"Bearer {api_key}"
@@ -88,6 +89,7 @@ chain = prompt | llm | parser
 
 # 5. Cria memória conversacional
 memoria_token = criar_memoria(llm)
+history = memoria_token.load_memory_variables({})["history"] # string
 
 # TESTE: Invocar a chain com as variáveis do template
 while True:
@@ -112,11 +114,11 @@ while True:
         # Recupera somente o histórico
         history = obter_historico(memoria_token) 
         
-        tokens_entrada = contar_tokens_entrada(history, pergunta, prompt)
+        tokens_entrada = contar_tokens_entrada(history, pergunta, dados_mock)
         inicio_resposta = time.perf_counter()
         
         # Executa a chain
-        resposta = chain.invoke({
+        resposta = chain.invoke({ # Manda system prompt, contexto, histórico e pergunta ao modelo
 
             "contexto": _carregar_dados_mock(),
             "history": history,
@@ -144,7 +146,7 @@ while True:
         print(f"Latência resposta: {latencia_resposta:.3f} s")
         print(f"Latência total: {latencia_total:.3f} s")
         print(f"Tokens entrada: {tokens_entrada}")
-        print(f"Tokens saída: {tokens_saida}")
+        print(f"Tokens saída: {tokens_saida}. Total: {tokens_entrada + tokens_saida}")
 
     elif classificacao == "estruturada": # executa chain estruturada (Pydantic)
 

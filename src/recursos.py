@@ -22,13 +22,11 @@ def _carregar_router_system_prompt() -> str:
     
     return 
     
-    
-def _carregar_dados_mock() -> str:
+def _carregar_dados_mock() -> dict:
     """Carrega os dados mock operacionais do arquivo data/mock_data.json."""
-    
     base = Path(__file__).resolve().parent.parent
     with open(base / "data" / "mock_data.json", "r", encoding="utf-8") as f:
-        dados = json.load(f)
+        return json.load(f)
         
     return json.dumps(dados, ensure_ascii=False, indent=2)
 
@@ -90,21 +88,16 @@ Picos: {', '.join(hist['horarios_pico'])} | Vale: {', '.join(hist['horarios_vale
 
 === FIM DOS DADOS ===="""
 
-def contar_tokens_entrada(history, pergunta, prompt)->int:
-    '''Monta o prompt para retornar número tokens da entrada'''
+def contar_tokens_entrada(pergunta, history, dados_mock)->int:
+    """Conta os tokens do histórico + contexto operacional + pergunta."""
     
-    prompt_formatado = prompt.invoke({
-        "contexto": _carregar_dados_mock(),
-        "history": history,
-        "pergunta": pergunta,
-    })
+    contexto = _formatar_contexto_operacional(dados_mock)
 
-    texto_entrada = "\n".join(
-        mensagem.content
-        for mensagem in prompt_formatado.messages
+    texto_entrada = (
+        f"{contexto}\n"
+        f"{history}\n"
+        f"Pergunta: {pergunta}"
     )
 
-    tokens_entrada = len(enc.encode(texto_entrada))
-    
-    return tokens_entrada
+    return len(enc.encode(texto_entrada))
     
