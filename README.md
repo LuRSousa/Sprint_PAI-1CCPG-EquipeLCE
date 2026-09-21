@@ -395,8 +395,15 @@ ChargeGrid-Assistant/
 │   └── mock_data.json
 │
 ├── prompts/
-│   ├── system_prompt.md
-│   └── ...
+│   ├── router_system_prompts/
+│   |   ├── router_system_prompt_v1.md
+|   |   └── router_system_prompt_v2.md
+|   |
+|   ├── system_prompts/
+│   |   ├── system_prompt_v1.md
+|   |   └── system_prompt_v2.md
+|   |
+|   └── tabela_comparativa.md
 │
 ├── evals/
 │   ├── modelo_de_teste_v1.md
