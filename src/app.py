@@ -5,6 +5,7 @@ import streamlit as st
 from datetime import datetime
 from pathlib import Path
 import sys
+import time
 
 from chain.memoria import criar_memoria
 
@@ -234,11 +235,20 @@ def main():
     if mensagem_final:
         st.session_state.mensagens_ui.append({"role": "user", "content": mensagem_final})
         with st.spinner("⚡ Consultando dados do posto..."):
+            
+            inicio = time.perf_counter() # Início do cronômetro para medir latência
+            
             try:
                 resultado = processar_pergunta(
                     mensagem_final,
                     st.session_state.session_id
                 )
+                
+                fim = time.perf_counter()
+
+                latencia = fim - inicio
+                print(f"Latência: {latencia:.2f} -----")
+                
                 resposta = resultado["resposta"]
             except Exception as e:
                 resposta = f"❌ Erro: {e}"

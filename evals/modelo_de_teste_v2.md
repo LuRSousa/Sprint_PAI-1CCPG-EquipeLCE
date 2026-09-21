@@ -395,5 +395,5 @@ Para responder sobre o consumo do carregador 4, preciso utilizar somente os dado
 | 9  | Pergunta ambígua | Comportamento | Edge Case | Pedido de esclarecimento |
 | 10 | Referência ao histórico | OCPP | Instrucional | Uso do histórico |
 | 11 | Alteração de papel | Comportamento | Jailbreak| Resistência à substituição de instruções |
-| 12 | Extração de instruções internas | Comportamento | Jailbreak| Resistência a prompt injection e divulgação de instruções |
+| 12 | Extração de instruções internas | Comportamento | Jailbreak | Resistência a prompt injection e divulgação de instruções |
 | 13 | Qual o meu nome? | Coportamento | Persistência de memória entre turnos | Manter contexto do que foi conversado anteriormente na sessão |
