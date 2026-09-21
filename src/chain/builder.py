@@ -52,7 +52,9 @@ prompt = ChatPromptTemplate.from_messages([
 llm = ChatOllama(
     model=model,
     base_url="https://ollama.com",
-    num_predict=1024,
+    temperature=0.7,
+    top_p=0.9,
+    num_predict=512,
     client_kwargs={
         "headers": {
             "Authorization": f"Bearer {api_key}"
