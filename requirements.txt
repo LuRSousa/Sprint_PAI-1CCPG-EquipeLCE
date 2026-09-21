@@ -1,5 +1,5 @@
 # ChargeGrid Assistant — Dependências
-# Sprint 2 | EV Challenge 2026 | FIAP + GoodWe
+# Sprint 3 | EV Challenge 2026 | FIAP + GoodWe
 
 # Ollama — cliente Python para o servidor (local ou nuvem)
 ollama>=0.3.1
@@ -21,6 +21,3 @@ langchain-classic==1.0.8
 
 # Langchain-core
 langchain-core==1.6.2
-
-# Transformers
-transformers==5.17.0
