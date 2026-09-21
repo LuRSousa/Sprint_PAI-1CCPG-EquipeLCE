@@ -7,7 +7,7 @@ def criar_memoria(llm):
         
         ConversationTokenBufferMemory (
             llm = llm,
-            max_token_limit = 800,
+            max_token_limit = 1100,
             memory_key = "history",
             return_messages = True,
         )

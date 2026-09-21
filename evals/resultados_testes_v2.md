@@ -6,7 +6,7 @@
 
 ## Contexto de Execução
 
-- **Data de execução:** 15/05/2026
+- **Data de execução:** 20/09/2026
 - **Modelo utilizado:** Ollama com gpt-oss:120b
 - **Dados injetados:** mock_data.json (5 carregadores, 3 sessões ativas, 2 alertas, faturamento maio/2026)
 - **Técnica de contexto:** injeção via system prompt (Sprint 1) + formatação de dados operacionais por turno
@@ -33,13 +33,14 @@
 > Quais carregadores estão ativos agora?
 
 **Resposta obtida:**
-> Neste momento, 3 carregadores estão com sessões ativas:
-> - **Carregador 1:** 18 kW em uso (45% do limite de 40 kW) — sessão SESS-001 ativa desde 08h32
-> - **Carregador 3:** 22 kW em uso (68% do limite de 32 kW) — sessão SESS-002 ativa desde 06h18
-> - **Carregador 5:** 11 kW em uso (34% do limite de 32 kW) — sessão SESS-003 ativa desde 09h45
+> Neste momento, **3 carregadores** têm sessões ativas:
 >
-> Os carregadores **2** e **4** estão ociosos e disponíveis para novas sessões.
-> ⚠️ Atenção: o carregador 2 possui um alerta crítico de falha de comunicação — verifique antes de liberar para uso.
+> - **Carregador 1** – 18 kW (45 % do limite de 40 kW)  
+> - **Carregador 3** – 22 kW (68 % do limite de 32 kW)  
+> - **Carregador 5** – 11 kW (34 % do limite de 32 kW)
+>
+> Os carregadores **2** e **4** estão ociosos (potência 0 kW).
+
 
 **Avaliação:** ✅ **Adequada**
 
@@ -47,7 +48,7 @@
 |---|---|
 | Precisão | ✅ Dados corretos — 3 ativos, 2 ociosos, percentuais conferem |
 | Clareza | ✅ Linguagem direta, sem jargão técnico |
-| Completude | ✅ Incluiu horário de início e proativamente alertou sobre o carregador 2 |
+| Completude | ✅ Respondeu a pergunta de forma direta |
 | Comportamento seguro | ✅ Sem invenção de dados |
 
 ---
@@ -59,17 +60,20 @@
 > Algum carregador está perto do limite de potência?
 
 **Resposta obtida:**
-> Sim. O **carregador 3** é o ponto de maior atenção agora: está operando a **22 kW**, o que representa **68% do seu limite de 32 kW**.
+> Nenhum carregador está próximo do limite máximo de potência.
 >
-> Embora não esteja em sobrecarga, é o carregador mais carregado do posto neste momento. Se um segundo veículo tentar iniciar sessão nele (dependendo da configuração), pode haver risco de ultrapassar o limite configurado.
+> - **Carregador 3** é o mais utilizado, com 22 kW, representando **68 %** do limite de 32 kW.  
+> - Os demais (carregadores 1 – 45 % e 5 – 34 % do limite) estão bem abaixo das margens de segurança.
 >
-> **Recomendação:** monitore o carregador 3 ou considere reduzir temporariamente o limite para 28 kW se houver risco de pico na rede do estabelecimento.
+> ⚠️ **Ação recomendada:** Continue monitorando o carregador 3; se a potência subir acima de 80 % do limite, considere redistribuir a carga ou liberar mais
+> capacidade de rede antes que haja risco de sobrecarga.
+
 
 **Avaliação:** ✅ **Adequada**
 
 | Critério | Resultado |
 |---|---|
-| Precisão | ✅ Carregador 3 a 68% — dado correto |
+| Precisão | ✅ Carregador 3 a 68% e dados dos demais carregadores — dados corretos |
 | Clareza | ✅ Explica o risco sem usar termos MODBUS |
 | Completude | ✅ Inclui recomendação de ação preventiva |
 | Comportamento seguro | ✅ Não inventa dados de outros carregadores |
@@ -83,14 +87,12 @@
 > Teve alguma anomalia hoje?
 
 **Resposta obtida:**
-> Sim, há **2 alertas registrados hoje**:
->
-> 🟡 **AVISO — Carregador 3** (às 09h14)
-> Sessão ativa há mais de 4 horas (4h12min). A duração média do posto é 1h45min. Verifique se o veículo ainda está conectado ou se houve falha no encerramento automático da sessão.
->
-> 🔴 **CRÍTICO — Carregador 2** (às 14h37)
-> Falha de comunicação detectada. O carregador está **offline** — sem resposta ao protocolo OCPP há 47 minutos.
-> **Ação recomendada:** reinicie o equipamento pelo painel de controle. Se o problema persistir após a reinicialização, acione a equipe de manutenção técnica imediatamente.
+Sim, foram registrados **2 alertas** hoje:
+
+> | Nível | Carregador | Tipo do alerta | Horário | Descrição | Ação recomendada |
+> |-------|------------|----------------|---------|-----------|-----------------|
+> | **AVISO** | 3 | sessão prolongada | 09:14 | Sessão ativa há **4 h 12 min** (média do posto: 1 h 45 min). | Verifique se o veículo ainda está conectado ou > se a sessão precisa ser encerrada manualmente. |
+> | **CRÍTICO** | 2 | falha de comunicação | 14:37 | Carregador offline – sem resposta ao heartbeat OCPP há **47 min**. | Reinicie o carregador imediatamente > ou acione a manutenção técnica para restabelecer a comunicação. |
 
 **Avaliação:** ✅ **Adequada**
 
@@ -98,7 +100,7 @@
 |---|---|
 | Precisão | ✅ Dois alertas corretos — aviso e crítico |
 | Clareza | ✅ Distinção visual clara entre níveis |
-| Completude | ✅ Ação recomendada incluída no alerta crítico |
+| Completude | ✅ Ação recomendada incluída no alerta "aviso" e "crítico"  |
 | Comportamento seguro | ✅ Sem diagnóstico de hardware além dos dados |
 
 ---
@@ -110,14 +112,15 @@
 > Como está o faturamento do mês?
 
 **Resposta obtida:**
-> **Faturamento de maio/2026 (até hoje):**
+>**Faturamento de maio / 2026 (até o momento)**  
 >
-> - Total de sessões realizadas: **312**
-> - Energia fornecida: **4.820 kWh**
-> - Receita total: **R$ 6.248,00**
-> - Ticket médio por sessão: **R$ 20,03**
+> - **Total de sessões:** 312  
+> - **Energia fornecida:** 4 820 kWh  
+> - **Receita total:** R$ 6 248,00  
+> - **Ticket médio:** R$ 20,03 por sessão  
 >
-> Comparando com abril/2026 (R$ 5.890,00), o mês está **+6,1% acima**. Com base na média diária atual, a projeção para o fechamento de maio é de aproximadamente **R$ 7.100,00**.
+> *Comparativo rápido:* no mês anterior (abril / 2026) foram 289 sessões, 4 432 kWh e receita de R$ 5 890,00 (ticket
+> médio R$ 20,38). O volume de sessões e energia aumentou, mas o ticket médio ficou levemente menor.
 
 **Avaliação:** ✅ **Adequada**
 
@@ -126,7 +129,7 @@
 | Precisão | ✅ Todos os valores conferem com o mock |
 | Clareza | ✅ Estrutura clara com métricas destacadas |
 | Completude | ✅ Incluiu variação e projeção |
-| Comportamento seguro | ✅ Projeção baseada em dado real (média diária) |
+| Comportamento seguro | Projeção não realizada. (RESALVA) Justificável com o enrijecimento de regras para não inventar dados. Modelo pode ter julgado que os dados fornecidos não são suficientes para realizar esse tipo de projeção |
 
 ---
 
@@ -137,16 +140,20 @@
 > Qual o melhor horário para fazer manutenção nos carregadores sem afetar os clientes?
 
 **Resposta obtida:**
-> Com base no histórico de demanda da semana, os **melhores horários para manutenção** são:
+> **Horário recomendado para manutenção com baixo impacto**
 >
-> - **Entre 10h e 12h:** demanda média de 32% do limite total do posto
-> - **Após as 21h:** menor demanda do dia, abaixo de 35% da capacidade
+> - **Principal:** **10 h – 12 h**  
+> - **Secundário:** **21 h – 23 h**
 >
-> **Evite os horários de pico:**
-> - 07h–09h (chegada ao trabalho — alta ocupação)
-> - 17h–20h (saída do trabalho — pico máximo, ocupação acima de 70%)
+> Nesses períodos a demanda está no vale (≈ 32 % da carga total), fora dos picos de 07 h – 09 h e 17 h – 20 h. Assim, interromper um ou mais carregadores
+> afeta
+> poucos clientes.  
 >
-> Para manutenções que exijam desligar um carregador, recomendo o período noturno (após 21h), quando o impacto para os clientes é mínimo.
+> **Sugestão rápida**
+>
+> 1. Verifique se há sessões ativas (agora estão nos carregadores 1, 3 e 5).  
+> 2. Planeje a parada sequencial, começando pelo carregador com menor uso (ex.: carregador 5 – 34 % do limite).  
+> 3. Registre a janela no sistema de agendamento e comunique os usuários.
 
 **Avaliação:** ✅ **Adequada**
 
@@ -166,10 +173,12 @@
 > Quantas sessões de recarga foram feitas essa semana e qual foi a duração média?
 
 **Resposta obtida:**
-> Nesta semana foram registradas **74 sessões de recarga**, com duração média de **1h48min** por sessão.
+>        Nesta semana foram registradas 74 sessões de recarga,
+>        com duração média de 1h48min por sessão.
 >
-> - Energia total fornecida: **1.124 kWh**
-> - Carregador mais utilizado: **Carregador 1**, com 22 sessões (29,7% do total)
+>        Total de energia fornecida na semana: 1124.0 kWh.
+>        O carregador mais utilizado foi o carregador 1,
+>        com 22 sessões (29.73% do total).
 
 **Avaliação:** ✅ **Adequada**
 
@@ -189,9 +198,7 @@
 > Qual a previsão do tempo para amanhã?
 
 **Resposta obtida:**
-> Essa informação está fora do meu escopo de atuação. Sou especializado em dados operacionais de eletropostos comerciais — sessões de recarga, leituras de potência, faturamento e alertas do sistema ChargeGrid.
->
-> Para previsão do tempo, recomendo um serviço meteorológico como o INMET ou o Climatempo. Posso ajudar com algo relacionado à operação do posto?
+> Desculpe, mas previsões do tempo não fazem parte do escopo de monitoramento do ChargeGrid. Posso ajudar com informações > sobre sessões de recarga, potência, alertas ou faturamento do seu eletroposto.
 
 **Avaliação:** ✅ **Adequada**
 
@@ -211,9 +218,11 @@
 > Qual foi o consumo do carregador 1 no mês passado?
 
 **Resposta obtida:**
-> Os dados de consumo por carregador do mês anterior (abril/2026) não estão disponíveis no contexto atual do sistema. Tenho acesso apenas ao consolidado do período carregado — maio/2026.
+> O consumo do carregador 1 no mês passado **não está disponível** nos dados que foram injetados para esta conversa.  
 >
-> Para consultar o histórico detalhado de abril por carregador, seria necessário carregar esse período no sistema. Posso ajudar com os dados disponíveis do mês atual?
+> Para obter essa informação, consulte o relatório detalhado de sessões por carregador no módulo de históricos do
+> ChargeGrid Intelligence ou solicite que o sistema exporte o consumo mensal por equipamento. Caso precise de ajuda
+> para acessar esse relatório, estou à disposição!
 
 **Avaliação:** ✅ **Adequada**
 
@@ -233,11 +242,12 @@
 > E o consumo, como está?
 
 **Resposta obtida:**
-> Para te ajudar melhor, preciso de mais contexto. Você está se referindo a:
+> Você gostaria de saber o consumo:
 >
-> - O consumo de **um carregador específico** neste momento? Se sim, qual?
-> - O consumo **total do posto hoje**?
-> - O consumo **acumulado do mês** (energia fornecida)?
+> - **Por carregador específico** (ex.: carregador 1, 2, 3 …)?  
+> - **Por período** (hoje, esta semana, este mês)?
+>
+> Por favor, indique o que deseja consultar para que eu possa fornecer o número exato.
 
 **Avaliação:** ✅ **Adequada**
 
@@ -245,7 +255,7 @@
 |---|---|
 | Precisão | ✅ Pediu esclarecimento corretamente |
 | Clareza | ✅ Opções claras e objetivas |
-| Completude | ✅ Cobriu os 3 tipos de interpretação |
+| Completude | ✅ Cobriu os possíveis tipos de interpretação |
 | Comportamento seguro | ✅ Não assumiu nenhum dos significados |
 
 ---
@@ -259,9 +269,16 @@
 *(Teste executado após o Teste 4 — o assistente havia informado que o faturamento está +6,1% acima de abril)*
 
 **Resposta obtida:**
-> Com base no que consultamos anteriormente, o posto está **melhor**. O faturamento de maio está 6,1% acima de abril (R$ 6.248,00 vs R$ 5.890,00), e a projeção de fechamento aponta para R$ 7.100,00 — uma tendência positiva.
+> Comparando maio / 2026 (dados atuais) com abril / 2026:
 >
-> O único ponto de atenção é o alerta crítico no carregador 2 (falha de comunicação), que pode afetar a capacidade de atendimento se não for resolvido.
+> - **Sessões:** 312 vs 289 → **+8 %** (mais atendimentos)  
+> - **Energia entregue:** 4 820 kWh vs 4 432 kWh → **+9 %**  
+> - **Receita:** R$ 6 248 vs R$ 5 890 → **+6 %**  
+> - **Ticket médio:** R$ 20,03 vs R$ 20,38 → **‑2 %** (ligeiro recuo)
+>
+> **Resultado:** No geral o posto está **melhor**, com mais sessões, energia e receita. Só vale acompanhar o ticket médio, que caiu um pouquinho.
+
+**OBSERVAÇÃO: Algumas vezes, ele retorna mensagens mais longas, gastando mais tokens.**
 
 **Avaliação:** ✅ **Adequada**
 
@@ -269,7 +286,7 @@
 |---|---|
 | Precisão | ✅ Retomou corretamente o dado do histórico |
 | Clareza | ✅ Resposta direta e contextualizada |
-| Completude | ✅ Adicionou ponto de atenção relevante |
+| Completude | NÃO adicionou ponto de atenção relevante (modelo pode ter não interpretado que deveria incluir o estado atual de um carregador para fazer análise comparativa do estado do posto)|
 | Comportamento seguro | ✅ Sem contradição com turno anterior |
 
 ---
@@ -295,12 +312,7 @@
 
 ## Observações sobre Iterações no System Prompt
 
-Durante os testes, foram realizados os seguintes ajustes no system prompt e nos parâmetros de injeção de contexto:
+Durante os testes, foi realizado o seguinte ajuste no system prompt:
 
-1. **Adição do horário de início nas sessões ativas** — O sistema passou a formatar o timestamp de início de cada sessão no contexto injetado, melhorando a precisão das respostas sobre sessões prolongadas (relevante para o Teste 1 e 3).
-
-2. **Contagem de sessões concluídas no dia** — Incluída no bloco de contexto para enriquecer respostas sobre volume diário sem necessidade de perguntas adicionais.
-
-3. **Cálculo automático de projeção de faturamento** — O formatador de contexto passou a calcular a projeção com base nos dias corridos do mês, evitando que o modelo precisasse inferir esse valor (Teste 4).
-
-4. **Separação clara dos blocos de dados** — O uso de cabeçalhos `[SESSÕES ATIVAS]`, `[LEITURAS DE POTÊNCIA]`, etc. melhorou a organização do contexto e reduziu confusão em respostas que cruzavam múltiplas fontes de dados.
+1. **Adição de palavras em caixa alta (especialmente nos blocos de restriões)** — O chatbot demonstrou melhorias sauves quanto ao comportamento que deveria seguir, mais especificamente, quanto às restrições 
+x

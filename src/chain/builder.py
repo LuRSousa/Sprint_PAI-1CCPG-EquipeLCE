@@ -91,6 +91,17 @@ chain = prompt | llm | parser
 memoria_token = criar_memoria(llm)
 history = memoria_token.load_memory_variables({})["history"] # string
 
+def exibir_metricas_modelo(latencia_router, latencia_resposta, latencia_total, tokens_entrada, tokens_saida, tokens_router):
+    '''Printa no terminal métricas de latência e tokens'''
+    
+    print("\n--- Métricas ---")
+    print(f"Latência router: {latencia_router:.3f} s")
+    print(f"Latência resposta: {latencia_resposta:.3f} s")
+    print(f"Latência total: {latencia_total:.3f} s")
+    print(f"Tokens entrada: {tokens_entrada}")
+    print(f"Tokens router: {tokens_router}")
+    print(f"Tokens saída: {tokens_saida}. Total: {tokens_entrada + tokens_saida + tokens_router}")
+
 # TESTE: Invocar a chain com as variáveis do template
 while True:
 
@@ -98,7 +109,7 @@ while True:
     
     inicio_router = time.perf_counter()
     
-    classificacao = classificar_prompt(llm_router, pergunta)
+    classificacao, tokens_router = classificar_prompt(llm_router, pergunta)
 
     latencia_router = time.perf_counter() - inicio_router
 
@@ -141,12 +152,7 @@ while True:
         print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}") # !! Monitoramento
         # print(memoria) # !! Monitoramento
         
-        print("\n--- Métricas ---")
-        print(f"Latência router: {latencia_router:.3f} s")
-        print(f"Latência resposta: {latencia_resposta:.3f} s")
-        print(f"Latência total: {latencia_total:.3f} s")
-        print(f"Tokens entrada: {tokens_entrada}")
-        print(f"Tokens saída: {tokens_saida}. Total: {tokens_entrada + tokens_saida}")
+        exibir_metricas_modelo(latencia_router, latencia_resposta, latencia_total, tokens_entrada, tokens_saida, tokens_router)
 
     elif classificacao == "estruturada": # executa chain estruturada (Pydantic)
 
@@ -171,11 +177,6 @@ while True:
 
         # print(memoria)
         
-        print("\n--- Métricas ---")
-        print(f"Latência router: {latencia_router:.3f} s")
-        print(f"Latência resposta: {latencia_resposta:.3f} s")
-        print(f"Latência total: {latencia_total:.3f} s")
-        print(f"Tokens entrada: {tokens_entrada}")
-        print(f"Tokens saída: {tokens_saida}. Total = {tokens_entrada + tokens_saida}")
+        exibir_metricas_modelo(latencia_router, latencia_resposta, latencia_total, tokens_entrada, tokens_saida, tokens_router)
     
     else: print("Tivemos um problema em processar sua mensagem! Por favor, reenvie-a.") # !! Monitoramento
