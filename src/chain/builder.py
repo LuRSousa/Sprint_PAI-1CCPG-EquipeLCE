@@ -52,8 +52,8 @@ prompt = ChatPromptTemplate.from_messages([
 llm = ChatOllama(
     model=model,
     base_url="https://ollama.com",
-    temperature=0.7,
-    top_p=0.9,
+    temperature=0.2,
+    top_p=0.5,
     num_predict=512,
     client_kwargs={
         "headers": {
