@@ -71,12 +71,12 @@ def executar_chain_estruturada(history, pergunta)->str:
         resposta = parser_pydantic.invoke(resposta)
         
         resposta_formatada = f'''
-            Nesta semana foram registradas {resposta.num_sessoes} sessões de recarga,
-            com duração média de {resposta.duracao_media} por sessão.
+        Nesta semana foram registradas {resposta.num_sessoes} sessões de recarga,
+        com duração média de {resposta.duracao_media} por sessão.
 
-            Total de energia fornecida na semana: {resposta.energia_fornecida} kWh.
-            O carregador mais utilizado foi o carregador {resposta.carregador_mais_usado},
-            com {resposta.sessoes_carregador_mais_usado} sessões ({resposta.percentual_sessoes_carregador_mais_usado}% do total).
+        Total de energia fornecida na semana: {resposta.energia_fornecida} kWh.
+        O carregador mais utilizado foi o carregador {resposta.carregador_mais_usado},
+        com {resposta.sessoes_carregador_mais_usado} sessões ({resposta.percentual_sessoes_carregador_mais_usado}% do total).
         '''
         
         return (resposta_formatada, tokens_entrada, tokens_saida)

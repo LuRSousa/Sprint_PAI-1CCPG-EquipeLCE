@@ -12,6 +12,11 @@ if str(SRC_DIR) not in sys.path:
 from recursos import _carregar_router_system_prompt
 from schemas.consulta_recarga import RotaConsulta
 
+import tiktoken
+
+# Objeto encoder/tokenizer
+enc = tiktoken.get_encoding("cl100k_base")
+
 def classificar_prompt(llm, pergunta) -> str: 
     '''Ecxecuta uma chain dedicada à classificar o user prompt, determinando se ele está pedindo por informações 
     das sessões de recarga da semana correte ou não. Devolve uma string (validada por um schema Pydantic)
@@ -29,10 +34,26 @@ def classificar_prompt(llm, pergunta) -> str:
         
     ]).partial(format_instructions=parser.get_format_instructions())
 
-    chain = prompt | llm | parser
+    chain_llm = prompt | llm
 
-    resposta = chain.invoke({
+    # Executa a LLM
+    resposta_llm = chain_llm.invoke({
         "pergunta": pergunta,
     })
-    
-    return resposta.classificacao
+
+    # Mede a saída produzida pela LLM
+    tokens_saida = len(enc.encode(resposta_llm.content))
+
+    # Converte a resposta para RotaConsulta
+    resposta = parser.invoke(resposta_llm)
+
+    # Mede a entrada
+    prompt_formatado = prompt.invoke({
+        "pergunta": pergunta,
+    })
+
+    tokens_entrada = len(enc.encode(pergunta))
+
+    tokens_total = tokens_entrada + tokens_saida
+
+    return (resposta.classificacao, tokens_total)
