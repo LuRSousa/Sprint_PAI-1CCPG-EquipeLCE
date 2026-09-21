@@ -375,7 +375,8 @@ ChargeGrid-Assistant/
 │
 ├── src/
 │   ├── app.py
-│   │
+|   ├── recursos.py
+|   |
 │   ├── chain/
 │   │   ├── builder.py
 │   │   ├── memoria.py
@@ -398,16 +399,14 @@ ChargeGrid-Assistant/
 │   └── ...
 │
 ├── evals/
-│   ├── ...
+│   ├── modelo_de_teste_v1.md
+│   ├── modelo_de_teste_v2.md
+│   ├── resultado_de_teste_v1.md
+│   ├── resultado_de_teste_v2.md
 │   └── sprint3_results.json
-│
-├── tests/
-│   ├── modelo_de_teste.md
-│   └── resultados_testes.md
-│
+|
 └── docs/
     ├── fluxograma.png
-    ├── ...
     └── relatorio_modelos.md
 ```
 
