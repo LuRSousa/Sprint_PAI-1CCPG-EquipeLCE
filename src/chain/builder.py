@@ -1,29 +1,21 @@
-# OBSERVAÇÕES
-
-'''
-PROBLEMAS: 
-
-1. PROBLEMA: Após a injeção do mock_data.json, o modelo passou a não corresponder o resultado esperado no teste 9 
-   (Pergunta Ambígua)
-2. PROBLEMA: A llm porder perder o contexto do primeiro turno de conversa após poucos turnos depenendo da saída 
-   que ela produz  (relatórios de anomalias, por exemplo, consomem muitos tokens)
-3. PROBLEMA: O prompt v1 do router direciona (ás vezes) a resposta de "Alguma anomalia foi registrada essa semana?"
-   para a chain estruturada (devia ser nao_estruturada). Já retornou a respota correta, mas fora do schema e já 
-   retornou a resposta estruturada que não responde à pergunta Melhorar prompt v1
-
-'''
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser 
-from memoria import criar_memoria, obter_historico, salvar_turno
-# from langchain_classic.chains import ConversationChain
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables.history import RunnableWithMessageHistory
+
+from chain.memoria import criar_memoria, HistoricoTokenBuffer
 
 from dotenv import load_dotenv
 import os
 
-from router import classificar_prompt
-from structured_builder import executar_chain_estruturada
-from recursos import _carregar_system_prompt, _carregar_dados_mock, contar_tokens_entrada
+from chain.router import classificar_prompt
+from chain.structured_builder import executar_chain_estruturada
+
+from recursos import (
+    _carregar_system_prompt,
+    _carregar_dados_mock,
+    contar_tokens_entrada
+)
 
 import time
 import tiktoken
@@ -31,35 +23,33 @@ import tiktoken
 # Objeto encoder/tokenizer
 enc = tiktoken.get_encoding("cl100k_base")
 
+# Carrega variáveis de ambiente
 load_dotenv()
 
 model = os.getenv("OLLAMA_MODEL")
 model_router = os.getenv("OLLAMA_MODEL_ROUTER")
 api_key = os.getenv("OLLAMA_API_KEY")
-    
+
 # Dados do mock
 dados_mock = _carregar_dados_mock()
 
+
 # 1. Template: define estrutura e variáveis do prompt
 prompt = ChatPromptTemplate.from_messages([
-
-    ("system", _carregar_system_prompt()
-     + "\n\n"
-
-     + "Contexto_operacional>\n"
-     + "{contexto}\n"
-
-     ),
-
+    (
+        "system",
+        _carregar_system_prompt()
+        + "\n\n"
+        + "Contexto_operacional>\n"
+        + "{contexto}\n"
+    ),
     ("placeholder", "{history}"),
-
     ("human", "Pergunta do operador: {pergunta}")
-
 ])
 
-# 2. Conexões do modelo principal e de classificação de user prompt ao Ollama Cloud
+
+# 2. Conexões dos modelos ao Ollama Cloud
 llm = ChatOllama(
-    
     model=model,
     base_url="https://ollama.com",
     num_predict=1024,
@@ -71,7 +61,6 @@ llm = ChatOllama(
 )
 
 llm_router = ChatOllama(
-    
     model=model_router,
     base_url="https://ollama.com",
     client_kwargs={
@@ -81,102 +70,190 @@ llm_router = ChatOllama(
     }
 )
 
-# 3. Parser: extrai só o texto da resposta
+
+# 3. Parser: extrai somente o texto da resposta
 parser = StrOutputParser()
 
-# 4. Composição da Chain conversacional
+
+# 4. Composição da chain conversacional
 chain = prompt | llm | parser
 
-# 5. Cria memória conversacional
-memoria_token = criar_memoria(llm)
-history = memoria_token.load_memory_variables({})["history"] # string
 
-def exibir_metricas_modelo(latencia_router, latencia_resposta, latencia_total, tokens_entrada, tokens_saida, tokens_router):
-    '''Printa no terminal métricas de latência e tokens'''
-    
+# Memórias separadas por sessão
+memorias_por_sessao = {}
+
+
+def obter_memoria_por_sessao(session_id):
+    """
+    Recupera ou cria o histórico associado à sessão.
+
+    O histórico utilizado pelo RunnableWithMessageHistory é um
+    adaptador sobre ConversationTokenBufferMemory.
+    """
+
+    if session_id not in memorias_por_sessao:
+        memoria = criar_memoria(llm)
+
+        memorias_por_sessao[session_id] = HistoricoTokenBuffer(
+            memoria
+        )
+
+    return memorias_por_sessao[session_id]
+
+
+# 5. Adiciona gerenciamento automático de histórico à chain
+chain_com_memoria = RunnableWithMessageHistory(
+    chain,
+    obter_memoria_por_sessao,
+    input_messages_key="pergunta",
+    history_messages_key="history",
+)
+
+
+def exibir_metricas_modelo(
+    latencia_router,
+    latencia_resposta,
+    latencia_total,
+    tokens_entrada,
+    tokens_saida,
+    tokens_router
+):
+    """Printa no terminal métricas de latência e tokens."""
+
     print("\n--- Métricas ---")
+
     print(f"Latência router: {latencia_router:.3f} s")
+
     print(f"Latência resposta: {latencia_resposta:.3f} s")
+
     print(f"Latência total: {latencia_total:.3f} s")
+
     print(f"Tokens entrada: {tokens_entrada}")
+
     print(f"Tokens router: {tokens_router}")
-    print(f"Tokens saída: {tokens_saida}. Total: {tokens_entrada + tokens_saida + tokens_router}")
 
-# TESTE: Invocar a chain com as variáveis do template
-while True:
+    print(
+        f"Tokens saída: {tokens_saida}. "
+        f"Total: {tokens_entrada + tokens_saida + tokens_router}"
+    )
 
-    pergunta = input("\nDigite sua pergunta (ou 'sair'): ")
-    
+
+# 6. Processamento principal
+def processar_pergunta(pergunta, session_id):
+
     inicio_router = time.perf_counter()
-    
-    classificacao, tokens_router = classificar_prompt(llm_router, pergunta)
+
+    classificacao, tokens_router = classificar_prompt(
+        llm_router,
+        pergunta
+    )
+
+    print(f"\nPergunta: {pergunta}")
+    print(f"\nClassificação do prompt: {classificacao}")
 
     latencia_router = time.perf_counter() - inicio_router
 
-    print(f"\nPergunta: {pergunta}") # !! Monitoramento
-    print(f"Rota escolhida: {classificacao}") # !! Monitoramento
+    # Recupera o histórico da sessão para cálculo de tokens
+    memoria = obter_memoria_por_sessao(session_id)
 
-    if pergunta.lower() == "sair":
+    history = memoria.messages
 
-        break
+    # ============================================================
+    # CHAIN NÃO ESTRUTURADA
+    # ============================================================
 
-    elif classificacao == "nao_estruturada": # executa chain conversacional
+    if classificacao == "nao_estruturada":
 
-        # Recupera somente o histórico
-        history = obter_historico(memoria_token) 
-        
-        tokens_entrada = contar_tokens_entrada(history, pergunta, dados_mock)
+        tokens_entrada = contar_tokens_entrada(
+            history,
+            pergunta,
+            dados_mock
+        )
+
         inicio_resposta = time.perf_counter()
-        
-        # Executa a chain
-        resposta = chain.invoke({ # Manda system prompt, contexto, histórico e pergunta ao modelo
 
-            "contexto": _carregar_dados_mock(),
-            "history": history,
-            "pergunta": pergunta,
+        resposta = chain_com_memoria.invoke(
+            {
+                "contexto": dados_mock,
+                "pergunta": pergunta,
+            },
+            config={
+                "configurable": {
+                    "session_id": session_id
+                }
+            }
+        )
 
-        })
-        
-        latencia_resposta = time.perf_counter() - inicio_resposta
-        latencia_total = latencia_router + latencia_resposta
-        
+        latencia_resposta = (
+            time.perf_counter() - inicio_resposta
+        )
+
         tokens_saida = len(enc.encode(resposta))
-        
-        # Exibe resposta
-        print("\nChargeGrid Assistant:")
-        print(resposta) # !! Monitoramento
 
-        # Salva pergunta + resposta na memória
-        salvar_turno(memoria_token, pergunta, resposta)
+        # Não chamar salvar_turno() aqui.
+        # RunnableWithMessageHistory já gerencia o histórico.
 
-        print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}") # !! Monitoramento
-        # print(memoria) # !! Monitoramento
-        
-        exibir_metricas_modelo(latencia_router, latencia_resposta, latencia_total, tokens_entrada, tokens_saida, tokens_router)
+        return {
+            "resposta": resposta,
+            "classificacao": classificacao,
+            "tokens_entrada": tokens_entrada,
+            "tokens_saida": tokens_saida,
+            "tokens_router": tokens_router,
+            "latencia_router": latencia_router,
+            "latencia_resposta": latencia_resposta,
+            "latencia_total": (
+                latencia_router + latencia_resposta
+            ),
+        }
 
-    elif classificacao == "estruturada": # executa chain estruturada (Pydantic)
+    # ============================================================
+    # CHAIN ESTRUTURADA
+    # ============================================================
 
-        history = obter_historico(memoria_token)
-        
+    elif classificacao == "estruturada":
+
         inicio_resposta = time.perf_counter()
-        
-        dados_chain_estruturada = executar_chain_estruturada(history, pergunta)
-        
-        resposta, tokens_entrada, tokens_saida = dados_chain_estruturada
-        
-        latencia_resposta = time.perf_counter() - inicio_resposta
-        latencia_total = latencia_router + latencia_resposta
-        
-        # Exibe resposta
-        print("\nChargeGrid Assistant:")
-        print(resposta) # !! Monitoramento
 
-        # Salva pergunta + resposta na memória
-        salvar_turno(memoria_token, pergunta, resposta)
-        print(f"Mensagens no buffer: {len(obter_historico(memoria_token))}")
+        resposta, tokens_entrada, tokens_saida = (
+            executar_chain_estruturada(
+                history,
+                pergunta
+            )
+        )
 
-        # print(memoria)
-        
-        exibir_metricas_modelo(latencia_router, latencia_resposta, latencia_total, tokens_entrada, tokens_saida, tokens_router)
-    
-    else: print("Tivemos um problema em processar sua mensagem! Por favor, reenvie-a.") # !! Monitoramento
+        latencia_resposta = (
+            time.perf_counter() - inicio_resposta
+        )
+
+        return {
+            "resposta": resposta,
+            "classificacao": classificacao,
+            "tokens_entrada": tokens_entrada,
+            "tokens_saida": tokens_saida,
+            "tokens_router": tokens_router,
+            "latencia_router": latencia_router,
+            "latencia_resposta": latencia_resposta,
+            "latencia_total": (
+                latencia_router + latencia_resposta
+            ),
+        }
+
+    # ============================================================
+    # CLASSIFICAÇÃO INVÁLIDA
+    # ============================================================
+
+    else:
+
+        return {
+            "resposta": (
+                "Tivemos um problema em processar sua mensagem. "
+                "Por favor, tente novamente."
+            ),
+            "classificacao": classificacao,
+            "tokens_entrada": 0,
+            "tokens_saida": 0,
+            "tokens_router": tokens_router,
+            "latencia_router": latencia_router,
+            "latencia_resposta": 0,
+            "latencia_total": latencia_router,
+        }

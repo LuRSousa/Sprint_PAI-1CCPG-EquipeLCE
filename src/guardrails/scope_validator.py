@@ -2,7 +2,7 @@ import re
 import unicodedata
 from typing import List
 
-from src.schemas.consulta_recarga import ConsultaSessoesSemana
+from src.guardrails.ResultadoGuardrail import ResultadoGuardrail
 
 TERMOS_ESCOPO = [
     "carregador",
@@ -123,11 +123,11 @@ def dentro_do_escopo(pergunta: str) -> bool:
     return _contem(texto, TERMOS_ESCOPO)
 
 
-def validar_escopo(pergunta: str) -> ConsultaSessoesSemana:
+def validar_escopo(pergunta: str) -> ResultadoGuardrail:
     texto = normalizar(pergunta)
 
     if _contem(texto, TERMOS_SEGURANCA_ELETRICA):
-        return ConsultaSessoesSemana(
+        return ResultadoGuardrail(
             bloqueada=True,
             categoria="seguranca_eletrica",
             motivo="pedido de orientacao para intervencao eletrica",
@@ -135,7 +135,7 @@ def validar_escopo(pergunta: str) -> ConsultaSessoesSemana:
         )
 
     if _contem(texto, TERMOS_JURIDICO):
-        return ConsultaSessoesSemana(
+        return ResultadoGuardrail(
             bloqueada=True,
             categoria="juridico",
             motivo="pedido de aconselhamento juridico",
@@ -143,7 +143,7 @@ def validar_escopo(pergunta: str) -> ConsultaSessoesSemana:
         )
 
     if _contem(texto, TERMOS_FINANCEIRO):
-        return ConsultaSessoesSemana(
+        return ResultadoGuardrail(
             bloqueada=True,
             categoria="financeiro",
             motivo="pedido de aconselhamento financeiro",
@@ -151,14 +151,14 @@ def validar_escopo(pergunta: str) -> ConsultaSessoesSemana:
         )
 
     if not dentro_do_escopo(pergunta):
-        return ConsultaSessoesSemana(
+        return ResultadoGuardrail(
             bloqueada=True,
             categoria="fora_escopo",
             motivo="assunto sem relacao com a operacao do eletroposto",
             mensagem_usuario=MENSAGEM_FORA_ESCOPO,
         )
 
-    return ConsultaSessoesSemana(bloqueada=False)
+    return ResultadoGuardrail(bloqueada=False)
 
 
 PADROES_ESPECIFICACAO = [
@@ -176,14 +176,14 @@ MENSAGEM_SEM_BASE = (
 )
 
 
-def exige_especificacao_inexistente(pergunta: str) -> ConsultaSessoesSemana:
+def exige_especificacao_inexistente(pergunta: str) -> ResultadoGuardrail:
     texto = normalizar(pergunta)
     for padrao in PADROES_ESPECIFICACAO:
         if re.search(padrao, texto):
-            return ConsultaSessoesSemana(
+            return ResultadoGuardrail(
                 bloqueada=True,
                 categoria="especificacao_nao_disponivel",
                 motivo="pedido de especificacao de produto ausente da base",
                 mensagem_usuario=MENSAGEM_SEM_BASE,
             )
-    return ConsultaSessoesSemana(bloqueada=False)
+    return ResultadoGuardrail(bloqueada=False)

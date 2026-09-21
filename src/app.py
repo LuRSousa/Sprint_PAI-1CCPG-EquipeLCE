@@ -1,12 +1,15 @@
 import os
 import json
+import uuid
 import streamlit as st
 from datetime import datetime
 from pathlib import Path
 import sys
 
+from chain.memoria import criar_memoria
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from chatbot import ChargeGridChatbot
+from chain.builder import processar_pergunta, llm
 
 
 st.set_page_config(
@@ -61,32 +64,27 @@ st.markdown("""
 
 
 def _init_chatbot():
-    if "chatbot" not in st.session_state:
-        # ⭐ CORREÇÃO 2: Variável de ambiente corrigida
-        modelo = os.environ.get("OLLAMA_MODEL", "llama3.1")
-        try:
-            st.session_state.chatbot = ChargeGridChatbot(modelo=modelo)
-            st.session_state.mensagens_ui = []
-            boas_vindas = (
-                "Olá! Sou o **ChargeGrid Assistant**, seu assistente operacional "
-                "de eletropostos GoodWe. ⚡\n\n"
-                "Tenho acesso aos dados do seu posto — carregadores, potência, "
-                "alertas e faturamento.\n\nComo posso ajudar hoje?"
-            )
-            st.session_state.mensagens_ui.append({"role": "assistant", "content": boas_vindas})
-        except RuntimeError as e:
-            st.error(f"### ⚠️ Erro ao iniciar o Ollama\n\n```\n{e}\n```")
-            st.info(
-                "**Para resolver:**\n\n"
-                "**Modo local:**\n"
-                "1. Instale o Ollama: https://ollama.com/download\n"
-                "2. No terminal, rode: `ollama serve`\n"
-                "3. Baixe o modelo: `ollama pull llama3.1`\n\n"
-                "**Modo nuvem:**\n"
-                "1. Configure o arquivo `.env` com OLLAMA_HOST e sua API key\n"
-                "2. Recarregue esta página"
-            )
-            st.stop()
+
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = str(uuid.uuid4())
+
+    if "mensagens_ui" not in st.session_state:
+        st.session_state.mensagens_ui = []
+
+        boas_vindas = (
+            "Olá! Sou o **ChargeGrid Assistant**, seu assistente operacional "
+            "de eletropostos GoodWe. ⚡\n\n"
+            "Tenho acesso aos dados do seu posto — carregadores, potência, "
+            "alertas e faturamento.\n\n"
+            "Como posso ajudar hoje?"
+        )
+
+        st.session_state.mensagens_ui.append(
+            {
+                "role": "assistant",
+                "content": boas_vindas
+            }
+        )
 
 
 def _renderizar_sidebar():
@@ -98,9 +96,8 @@ def _renderizar_sidebar():
         st.markdown("## ⚡ Painel do Posto")
 
         modelo_atual = os.environ.get("OLLAMA_MODEL", "llama3.1")
-        host_atual = os.environ.get("OLLAMA_HOST", "localhost")
         st.caption(f"🤖 Modelo: `{modelo_atual}`")
-        st.caption(f"🌐 Host: `{host_atual}`")
+        st.caption("🌐 Provedor: `Ollama Cloud`")
         st.markdown("---")
 
         st.markdown("### 🔌 Carregadores")
@@ -139,16 +136,29 @@ def _renderizar_sidebar():
         st.markdown("### ⚙️ Controles")
 
         if st.button("🗑️ Nova Conversa", use_container_width=True):
-            st.session_state.chatbot.limpar_historico()
-            st.session_state.mensagens_ui = [{"role": "assistant", "content": "Olá! Como posso ajudar? ⚡"}]
+
+            st.session_state.session_id = str(uuid.uuid4())
+
+            st.session_state.mensagens_ui = [
+                {
+                    "role": "assistant",
+                    "content": "Olá! Como posso ajudar? ⚡"
+                }
+            ]
+
             st.rerun()
 
         if st.button("💾 Exportar Histórico", use_container_width=True):
-            historico = st.session_state.chatbot.obter_historico()
+            historico = st.session_state.get("mensagens_ui", [])
+
             if historico:
                 st.download_button(
                     label="📥 Baixar JSON",
-                    data=json.dumps(historico, ensure_ascii=False, indent=2),
+                    data=json.dumps(
+                        historico,
+                        ensure_ascii=False,
+                        indent=2
+                    ),
                     file_name=f"historico_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
                     mime="application/json",
                 )
@@ -225,7 +235,11 @@ def main():
         st.session_state.mensagens_ui.append({"role": "user", "content": mensagem_final})
         with st.spinner("⚡ Consultando dados do posto..."):
             try:
-                resposta = st.session_state.chatbot.enviar_mensagem(mensagem_final)
+                resultado = processar_pergunta(
+                    mensagem_final,
+                    st.session_state.session_id
+                )
+                resposta = resultado["resposta"]
             except Exception as e:
                 resposta = f"❌ Erro: {e}"
         st.session_state.mensagens_ui.append({"role": "assistant", "content": resposta})
