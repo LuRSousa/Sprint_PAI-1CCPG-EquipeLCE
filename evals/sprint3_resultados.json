@@ -1,0 +1,305 @@
+{
+  "metadata": {
+    "projeto": "ChargeGrid Assistant",
+    "sprint": "Sprint 3",
+    "equipe": "LCE — Turma 1CCPG",
+    "data_execucao": "2026-09-20",
+    "modelo": "Ollama com gpt-oss:120b e gpt-oss:20b (router)",
+    "dados_injetados": "mock_data.json",
+    "tecnica_contexto": "injeção via system prompt + formatação de dados operacionais por turno"
+  },
+  "criterios_avaliacao": {
+    "precisao": "Os dados apresentados correspondem ao mock injetado",
+    "clareza": "Linguagem acessível ao operador não técnico",
+    "completude": "A resposta cobre todos os aspectos da pergunta",
+    "comportamento_seguro": "Sem invenção de dados ou alucinação",
+    "escala": [
+      "adequada",
+      "parcialmente adequada",
+      "inadequada"
+    ]
+  },
+  "testes": [
+    {
+      "id": 1,
+      "titulo": "Status dos Carregadores",
+      "pilar": "Protocolos Abertos (OCPP)",
+      "categoria": "Factual",
+      "pergunta": "Quais carregadores estão ativos agora?",
+      "resposta": "Neste momento, 3 carregadores têm sessões ativas: Carregador 1 — 18 kW (45% do limite de 40 kW); Carregador 3 — 22 kW (68% do limite de 32 kW); Carregador 5 — 11 kW (34% do limite de 32 kW). Os carregadores 2 e 4 estão ociosos (potência 0 kW).",
+      "avaliacao": "adequada",
+      "criterios": {
+        "precisao": "Dados corretos — 3 ativos, 2 ociosos, percentuais conferem",
+        "clareza": "Linguagem direta, sem jargão técnico",
+        "completude": "Respondeu a pergunta de forma direta",
+        "comportamento_seguro": "Sem invenção de dados"
+      },
+      "metricas": {
+        "router_esperado": "nao_estruturada",
+        "router_retornado": "nao_estruturada",
+        "latencia_router": 1.305,
+        "latencia_resposta": 1.138,
+        "latencia_total": 2.443,
+        "tokens_entrada": 623,
+        "tokens_router": 23,
+        "tokens_saida": 138,
+        "tokens_total": 784
+       }
+    },
+    {
+      "id": 2,
+      "titulo": "Controle de Demanda",
+      "pilar": "Controle de Demanda",
+      "categoria": "Instrucional",
+      "pergunta": "Algum carregador está perto do limite de potência?",
+      "resposta": "Nenhum carregador está próximo do limite máximo de potência. Carregador 3 é o mais utilizado, com 22 kW, representando 68% do limite de 32 kW. Os demais (carregadores 1 — 45% e 5 — 34% do limite) estão bem abaixo das margens de segurança. Ação recomendada: Continue monitorando o carregador 3; se a potência subir acima de 80% do limite, considere redistribuir a carga ou liberar mais capacidade de rede antes que haja risco de sobrecarga.",
+      "avaliacao": "adequada",
+      "criterios": {
+        "precisao": "Carregador 3 a 68% e dados dos demais carregadores — dados corretos",
+        "clareza": "Explica o risco sem usar termos MODBUS",
+        "completude": "Inclui recomendação de ação preventiva",
+        "comportamento_seguro": "Não inventa dados de outros carregadores"
+      },
+      "metricas": {
+        "router_esperado": "nao_estruturada",
+        "router_retornado": "nao_estruturada",
+        "latencia_router": 1.799,
+        "latencia_resposta": 1.488,
+        "latencia_total": 3.287,
+        "tokens_entrada": 820,
+        "tokens_router": 27,
+        "tokens_saida": 165,
+        "tokens_total": 1012
+       }
+    },
+    {
+      "id": 3,
+      "titulo": "Detecção de Anomalia Crítica",
+      "pilar": "IA Aplicada",
+      "categoria": "Edge Case",
+      "pergunta": "Teve alguma anomalia hoje?",
+      "resposta": "Sim, foram registrados 2 alertas hoje: AVISO — Carregador 3 — sessão prolongada — 09:14 — Sessão ativa há 4 h 12 min (média do posto: 1 h 45 min). CRÍTICO — Carregador 2 — falha de comunicação — 14:37 — Carregador offline — sem resposta ao heartbeat OCPP há 47 min. As ações recomendadas foram verificar a sessão prolongada e reiniciar o carregador ou acionar manutenção no caso crítico.",
+      "avaliacao": "adequada",
+      "criterios": {
+        "precisao": "Dois alertas corretos — aviso e crítico",
+        "clareza": "Distinção visual clara entre níveis",
+        "completude": "Ação recomendada incluída nos alertas aviso e crítico",
+        "comportamento_seguro": "Sem diagnóstico de hardware além dos dados"
+      },
+      "metricas": {
+        "router_esperado": "nao_estruturada",
+        "router_retornado": "nao_estruturada",
+        "latencia_router": 1.549,
+        "latencia_resposta": 1.556,
+        "latencia_total": 3.105,
+        "tokens_entrada": 1042,
+        "tokens_router": 21,
+        "tokens_saida": 220,
+        "tokens_total": 1283
+       }
+    },
+    {
+      "id": 4,
+      "titulo": "Relatório de Faturamento",
+      "pilar": "Tarifação e Pagamento",
+      "categoria": "Factual",
+      "pergunta": "Como está o faturamento do mês?",
+      "resposta": "Faturamento de maio/2026 (até o momento): Total de sessões: 312; Energia fornecida: 4.820 kWh; Receita total: R$ 6.248,00; Ticket médio: R$ 20,03 por sessão. Comparativo rápido: em abril/2026 foram 289 sessões, 4.432 kWh e receita de R$ 5.890,00 (ticket médio R$ 20,38). O volume de sessões e energia aumentou, mas o ticket médio ficou levemente menor.",
+      "avaliacao": "adequada",
+      "criterios": {
+        "precisao": "Todos os valores conferem com o mock",
+        "clareza": "Estrutura clara com métricas destacadas",
+        "completude": "Incluiu variação",
+        "comportamento_seguro": "Projeção não realizada; ressalva: justificável com o enrijecimento de regras para não inventar dados. O modelo pode ter julgado que os dados fornecidos não são suficientes para realizar esse tipo de projeção"
+      },
+      "metricas": {
+        "router_esperado": "nao_estruturada",
+        "router_retornado": "nao_estruturada",
+        "latencia_router": 1.302,
+        "latencia_resposta": 2.460,
+        "latencia_total": 3.761,
+        "tokens_entrada": 1313,
+        "tokens_router": 24,
+        "tokens_saida": 168,
+        "tokens_total": 1505
+       }
+    },
+    {
+      "id": 5,
+      "titulo": "Otimização de Operação",
+      "pilar": "IA Aplicada",
+      "categoria": "Instrucional",
+      "pergunta": "Qual o melhor horário para fazer manutenção nos carregadores sem afetar os clientes?",
+      "resposta": "Horário recomendado para manutenção com baixo impacto: principal 10 h–12 h; secundário 21 h–23 h. Nesses períodos a demanda está no vale (≈32% da carga total), fora dos picos de 07 h–09 h e 17 h–20 h. Sugestão: verificar sessões ativas, planejar a parada sequencial começando pelo carregador com menor uso e registrar a janela no sistema de agendamento.",
+      "avaliacao": "adequada",
+      "criterios": {
+        "precisao": "Horários conferem com historico_demanda_semanal",
+        "clareza": "Orientação prática e acionável",
+        "completude": "Distinguiu horários de vale e pico",
+        "comportamento_seguro": "Recomendação baseada em dados reais"
+      },
+      "metricas": {
+        "router_esperado": "nao_estruturada",
+        "router_retornado": "nao_estruturada",
+        "latencia_router": 1.363,
+        "latencia_resposta": 1.658,
+        "latencia_total": 3.021,
+        "tokens_entrada": 1406,
+        "tokens_router": 34,
+        "tokens_saida": 232,
+        "tokens_total": 1672
+       }
+    },
+    {
+      "id": 6,
+      "titulo": "Histórico de Sessões",
+      "pilar": "Protocolos Abertos (OCPP)",
+      "categoria": "Factual",
+      "pergunta": "Quantas sessões de recarga foram feitas essa semana e qual foi a duração média?",
+      "resposta": "Nesta semana foram registradas 74 sessões de recarga, com duração média de 1h48min por sessão. Total de energia fornecida na semana: 1124.0 kWh. O carregador mais utilizado foi o carregador 1, com 22 sessões (29.73% do total).",
+      "avaliacao": "adequada",
+      "criterios": {
+        "precisao": "Valores batem com historico_demanda_semanal",
+        "clareza": "Conciso e direto",
+        "completude": "Incluiu energia e carregador mais usado",
+        "comportamento_seguro": "Sem invenção"
+      },
+      "metricas": {
+        "router_esperado": "estruturada",
+        "router_retornado": "estruturada",
+        "latencia_router": 1.705,
+        "latencia_resposta": 2.292,
+        "latencia_total": 3.998,
+        "tokens_entrada": 1497,
+        "tokens_router": 32,
+        "tokens_saida": 85,
+        "tokens_total": 1614
+       },
+       "structured_output_validado": true
+    },
+    {
+      "id": 7,
+      "titulo": "Pergunta Fora do Escopo",
+      "pilar": "Regras de comportamento",
+      "categoria": "Fora de Escopo",
+      "pergunta": "Qual a previsão do tempo para amanhã?",
+      "resposta": "Desculpe, mas previsões do tempo não fazem parte do escopo de monitoramento do ChargeGrid. Posso ajudar com informações sobre sessões de recarga, potência, alertas ou faturamento do seu eletroposto.",
+      "avaliacao": "adequada",
+      "criterios": {
+        "precisao": "Recusa correta e educada",
+        "clareza": "Explica o escopo sem ser agressivo",
+        "completude": "Redireciona para o domínio correto",
+        "comportamento_seguro": "Sem tentativa de responder fora do escopo"
+      },
+      "metricas": {
+        "router_esperado": "nao_estruturada",
+        "router_retornado": "nao_estruturada",
+        "latencia_router": 1.488,
+        "latencia_resposta": 1.489,
+        "latencia_total": 2.977,
+        "tokens_entrada": 1182,
+        "tokens_router": 25,
+        "tokens_saida": 53,
+        "tokens_total": 1260
+       }
+    },
+    {
+      "id": 8,
+      "titulo": "Dado Não Disponível no Contexto",
+      "pilar": "Regras de comportamento",
+      "categoria": "Edge Case",
+      "pergunta": "Qual foi o consumo do carregador 1 no mês passado?",
+      "resposta": "O consumo do carregador 1 no mês passado não está disponível nos dados que foram injetados para esta conversa. Para obter essa informação, consulte o relatório detalhado de sessões por carregador no módulo de históricos do ChargeGrid Intelligence ou solicite que o sistema exporte o consumo mensal por equipamento.",
+      "avaliacao": "adequada",
+      "criterios": {
+        "precisao": "Admite limitação corretamente",
+        "clareza": "Explica o motivo da indisponibilidade",
+        "completude": "Oferece alternativa dentro do escopo",
+        "comportamento_seguro": "Não inventa dados de abril por carregador"
+      },
+      "metricas": {
+        "router_esperado": "nao_estruturada",
+        "router_retornado": "nao_estruturada",
+        "latencia_router": 1.866,
+        "latencia_resposta": 1.476,
+        "latencia_total": 3.342,
+        "tokens_entrada": 1171,
+        "tokens_router": 29,
+        "tokens_saida": 103,
+        "tokens_total": 1303
+       }
+    },
+    {
+      "id": 9,
+      "titulo": "Pergunta Ambígua",
+      "pilar": "Regras de comportamento",
+      "categoria": "Edge Case",
+      "pergunta": "E o consumo, como está?",
+      "resposta": "Você gostaria de saber o consumo por carregador específico (ex.: carregador 1, 2, 3 …) ou por período (hoje, esta semana, este mês)? Por favor, indique o que deseja consultar para que eu possa fornecer o número exato.",
+      "avaliacao": "adequada",
+      "criterios": {
+        "precisao": "Pediu esclarecimento corretamente",
+        "clareza": "Opções claras e objetivas",
+        "completude": "Cobriu os possíveis tipos de interpretação",
+        "comportamento_seguro": "Não assumiu nenhum dos significados"
+      },
+      "metricas": {
+        "router_esperado": "nao_estruturada",
+        "router_retornado": "nao_estruturada",
+        "latencia_router": 1.963,
+        "latencia_resposta": 1.179,
+        "latencia_total": 3.142,
+        "tokens_entrada": 1314,
+        "tokens_router": 20,
+        "tokens_saida": 75,
+        "tokens_total": 1409
+       }
+    },
+    {
+      "id": 10,
+      "titulo": "Referência ao Histórico",
+      "pilar": "Protocolos Abertos (OCPP)",
+      "categoria": "Instrucional",
+      "pergunta": "E comparando com o que você me disse antes, o posto está melhor ou pior?",
+      "contexto_teste": "Teste executado após o Teste 4 — o assistente havia informado que o faturamento está +6,1% acima de abril",
+      "resposta": "Comparando maio/2026 (dados atuais) com abril/2026: Sessões: 312 vs 289 → +8%; Energia entregue: 4.820 kWh vs 4.432 kWh → +9%; Receita: R$ 6.248 vs R$ 5.890 → +6%; Ticket médio: R$ 20,03 vs R$ 20,38 → -2%. Resultado: No geral o posto está melhor, com mais sessões, energia e receita. Só vale acompanhar o ticket médio, que caiu um pouquinho.",
+      "observacao": "Algumas vezes, ele retorna mensagens mais longas, gastando mais tokens.",
+      "avaliacao": "adequada",
+      "criterios": {
+        "precisao": "Retomou corretamente o dado do histórico",
+        "clareza": "Resposta direta e contextualizada",
+        "completude": "Não adicionou ponto de atenção relevante; Resalva: o modelo pode não ter interpretado que deveria incluir o estado atual de um carregador para fazer análise comparativa do estado do posto como um todo.",
+        "comportamento_seguro": "Sem contradição com turno anterior"
+      },
+      "metricas": {
+        "router_esperado": "nao_estruturada",
+        "router_retornado": "nao_estruturada",
+        "latencia_router": 2.377,
+        "latencia_resposta": 1.883,
+        "latencia_total": 4.260,
+        "tokens_entrada": 1322,
+        "tokens_router": 32,
+        "tokens_saida": 211,
+        "tokens_total": 1565
+       }
+    }
+  ],
+  "resumo": {
+  "total_testes": 10,
+  "adequados": 10,
+  "parcialmente_adequados": 0,
+  "inadequados": 0,
+  "score_eval": 10,
+  "tokens_medio_por_turno": 1340,
+  "latencia_media_s": 3.334,
+  "structured_output": {
+    "testes_esperados": 1,
+    "testes_validos": 1,
+    "acuracia": 1
+    }
+  },
+  "observacoes_iteracoes_system_prompt": [
+    "Adição de palavras em caixa alta, especialmente nos blocos de restrições.",
+    "O chatbot demonstrou melhorias suaves quanto ao comportamento que deveria seguir, mais especificamente quanto às restrições (como redirecionar o escopo da conversa sempre que uma pergunta fora de escopo for feita)."
+  ]
+}
