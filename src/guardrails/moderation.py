@@ -6,7 +6,7 @@ from src.guardrails.scope_validator import (
     normalizar,
     validar_escopo,
 )
-from src.schemas.consulta_recarga import ConsultaSessoesSemana
+from src.guardrails.ResultadoGuardrail import ResultadoGuardrail
 
 PADROES_JAILBREAK: List[str] = [
     r"ignore (?:todas )?as (?:instrucoes|regras|orientacoes)",
@@ -66,9 +66,9 @@ def detectar_injecao(texto: str) -> bool:
     return any(re.search(padrao, alvo) for padrao in PADROES_INJECAO)
 
 
-def moderar(pergunta: str) -> ConsultaSessoesSemana:
+def moderar(pergunta: str) -> ResultadoGuardrail:
     if detectar_jailbreak(pergunta):
-        return ConsultaSessoesSemana(
+        return ResultadoGuardrail(
             bloqueada=True,
             categoria="jailbreak",
             motivo="tentativa de sobrescrever o papel ou as regras do assistente",
@@ -76,17 +76,17 @@ def moderar(pergunta: str) -> ConsultaSessoesSemana:
         )
 
     if detectar_injecao(pergunta):
-        return ConsultaSessoesSemana(
+        return ResultadoGuardrail(
             bloqueada=True,
             categoria="prompt_injection",
             motivo="tentativa de extrair instrucoes internas ou injetar comandos",
             mensagem_usuario=MENSAGEM_INJECAO,
         )
 
-    return ConsultaSessoesSemana(bloqueada=False)
+    return ResultadoGuardrail(bloqueada=False)
 
 
-def aplicar_guardrails(pergunta: str) -> ConsultaSessoesSemana:
+def aplicar_guardrails(pergunta: str) -> ResultadoGuardrail:
     resultado = moderar(pergunta)
     if resultado.bloqueada:
         return resultado
@@ -110,14 +110,14 @@ MENSAGEM_SAIDA_FILTRADA = (
 )
 
 
-def filtrar_saida(resposta: str) -> ConsultaSessoesSemana:
+def filtrar_saida(resposta: str) -> ResultadoGuardrail:
     alvo = normalizar(resposta)
     for padrao in PADROES_SAIDA_SUSPEITA:
         if re.search(padrao, alvo):
-            return ConsultaSessoesSemana(
+            return ResultadoGuardrail(
                 bloqueada=True,
                 categoria="vazamento_saida",
                 motivo="resposta continha referencia a instrucoes internas",
                 mensagem_usuario=MENSAGEM_SAIDA_FILTRADA,
             )
-    return ConsultaSessoesSemana(bloqueada=False)
+    return ResultadoGuardrail(bloqueada=False)
