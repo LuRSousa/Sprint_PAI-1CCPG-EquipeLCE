@@ -16,6 +16,7 @@ linguagem natural.
 | Leonardo Figueredo dos Santos | RM573653 | 1CCPG |
 | Leonardo Robert Maulicino | RM570329 | 1CCPG |
 | Lucas Ramos de Sousa | RM573901 | 1CCPG |
+| Matheus Pimenta Martini | RM569400 | 1CCPG |
 | Pablo Renato dos Santos Sobral de Carvalho | RM569894 | 1CCPG |
 
 ---
