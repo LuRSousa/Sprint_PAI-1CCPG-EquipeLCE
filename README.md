@@ -424,6 +424,7 @@ ChargeGrid-Assistant/
 # 📂 Arquivos e Documentação
 
 * [Fluxograma](docs/fluxograma.png)
+* [Relatório de evolução do projeto](docs/relatorio_evolucao.pdf)
 * [System Prompt](prompts/system_prompt.md)
 * [Dados mock](data/mock_data.json)
 * [Aplicação Streamlit](src/app.py)
