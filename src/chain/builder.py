@@ -53,7 +53,7 @@ llm = ChatOllama(
     model=model,
     base_url="https://ollama.com",
     temperature=0.2,
-    top_p=0.5,
+    top_p=0.9,
     num_predict=512,
     client_kwargs={
         "headers": {
