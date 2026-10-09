@@ -18,3 +18,8 @@ OLLAMA_EMBED_URL = os.getenv("OLLAMA_EMBED_URL", "http://localhost:11434")
 # As iterações do eval comparam outras configurações (ex.: 500/50 e 1000/150).
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 120
+
+# Recuperação: quantos trechos vão para o prompt (k) e a nota mínima para um trecho entrar.
+# Valores escolhidos com o teste de busca (evals/teste_busca.py); as iterações do eval podem mudar.
+K = 4
+LIMIAR = 0.68

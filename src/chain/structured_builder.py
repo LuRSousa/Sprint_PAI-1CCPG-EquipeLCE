@@ -8,6 +8,7 @@ from recursos import _carregar_dados_mock, _carregar_system_prompt, _formatar_co
 
 from dotenv import load_dotenv
 import os
+import textwrap
 
 import tiktoken
 
@@ -36,8 +37,9 @@ prompt = ChatPromptTemplate.from_messages([
 
 llm = ChatOllama(
 model=model,
-num_precit = 1024,
-base_url="https://ollama.com",
+temperature=0,       # Sprint 4: extração presa aos dados
+num_predict=1024,    # Sprint 3 tinha "num_precit" (erro de digitação: o limite não era aplicado)
+base_url=os.getenv("OLLAMA_BASE_URL", "https://ollama.com"),
 client_kwargs={
     "headers": {
         "Authorization": f"Bearer {api_key}"
@@ -70,14 +72,17 @@ def executar_chain_estruturada(history, pergunta)->str:
         
         resposta = parser_pydantic.invoke(resposta)
         
-        resposta_formatada = f'''
+        # dedent: sem os espaços do começo das linhas, o Streamlit não mostra o texto como bloco de código
+        resposta_formatada = textwrap.dedent(f'''
         Nesta semana foram registradas {resposta.num_sessoes} sessões de recarga,
         com duração média de {resposta.duracao_media} por sessão.
 
         Total de energia fornecida na semana: {resposta.energia_fornecida} kWh.
         O carregador mais utilizado foi o carregador {resposta.carregador_mais_usado},
         com {resposta.sessoes_carregador_mais_usado} sessões ({resposta.percentual_sessoes_carregador_mais_usado}% do total).
-        '''
+
+        (Fonte: dados operacionais do posto, histórico dos últimos 7 dias)
+        ''').strip()
         
         return (resposta_formatada, tokens_entrada, tokens_saida)
             

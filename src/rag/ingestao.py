@@ -41,7 +41,8 @@ def main():
 
     inicio = time.perf_counter()
     try:
-        total = recriar_colecao(chunks, args.colecao)
+        total = recriar_colecao(chunks, args.colecao,
+                                info={"chunk_size": args.chunk_size, "chunk_overlap": args.overlap})
     except ConnectionError:
         sys.exit("Não consegui falar com o Ollama. Abra o app do Ollama e rode de novo.")
     except ResponseError as erro:

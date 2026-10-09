@@ -16,11 +16,12 @@ def _existe(cliente, nome: str) -> bool:
     return nome in [colecao.name for colecao in cliente.list_collections()]
 
 
-def recriar_colecao(chunks, nome: str = COLECAO) -> int:
+def recriar_colecao(chunks, nome: str = COLECAO, info: dict | None = None) -> int:
     """Apaga a coleção antiga e grava os chunks de novo.
 
     Somar em vez de recriar duplicaria os trechos a cada ingestão,
     e a busca passaria a devolver o mesmo trecho repetido.
+    `info` fica guardado na coleção (ex.: chunk_size e overlap usados), para os testes saberem a configuração.
     """
     cliente = _cliente()
     if _existe(cliente, nome):
@@ -31,7 +32,7 @@ def recriar_colecao(chunks, nome: str = COLECAO) -> int:
         ids=[chunk.metadata["chunk_id"] for chunk in chunks],
         client=cliente,
         collection_name=nome,
-        collection_metadata={"hnsw:space": "cosine"},  # compara os vetores por cosseno
+        collection_metadata={"hnsw:space": "cosine", **(info or {})},  # compara os vetores por cosseno
     )
     return cliente.get_collection(nome).count()
 
@@ -42,6 +43,15 @@ def carregar_vector_store(nome: str = COLECAO) -> Chroma:
     if not _existe(cliente, nome):
         raise RuntimeError(f"A coleção '{nome}' ainda não existe. Rode antes: python src/rag/ingestao.py")
     return Chroma(client=cliente, collection_name=nome, embedding_function=criar_embeddings())
+
+
+def info_colecao(nome: str = COLECAO) -> dict:
+    """Quantidade de chunks e configuração guardada na coleção."""
+    cliente = _cliente()
+    if not _existe(cliente, nome):
+        raise RuntimeError(f"A coleção '{nome}' ainda não existe. Rode antes: python src/rag/ingestao.py")
+    colecao = cliente.get_collection(nome)
+    return {"chunks": colecao.count(), **(colecao.metadata or {})}
 
 
 def buscar(pergunta: str, k: int = 4, nome: str = COLECAO):

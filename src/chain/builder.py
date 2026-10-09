@@ -1,5 +1,4 @@
 from langchain_ollama import ChatOllama
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables.history import RunnableWithMessageHistory
 
@@ -12,10 +11,14 @@ from chain.router import classificar_prompt
 from chain.structured_builder import executar_chain_estruturada
 
 from recursos import (
-    _carregar_system_prompt,
     _carregar_dados_mock,
+    _formatar_contexto_operacional,
     contar_tokens_entrada
 )
+
+# Sprint 4: RAG (recuperação na base de conhecimento + prompt versionado)
+from rag.retriever import recuperar, formatar_para_prompt, como_fontes
+from rag.prompt_rag import montar_prompt, VERSAO_PROMPT
 
 import time
 import tiktoken
@@ -29,32 +32,25 @@ load_dotenv()
 model = os.getenv("OLLAMA_MODEL")
 model_router = os.getenv("OLLAMA_MODEL_ROUTER")
 api_key = os.getenv("OLLAMA_API_KEY")
+base_url = os.getenv("OLLAMA_BASE_URL", "https://ollama.com")
 
-# Dados do mock
+# Dados do mock, já formatados como texto (na Sprint 3 o JSON cru ia para o prompt)
 dados_mock = _carregar_dados_mock()
+dados_formatados = _formatar_contexto_operacional(dados_mock)
 
 
-# 1. Template: define estrutura e variáveis do prompt
-prompt = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        _carregar_system_prompt()
-        + "\n\n"
-        + "Contexto_operacional>\n"
-        + "{contexto}\n"
-    ),
-    ("placeholder", "{history}"),
-    ("human", "Pergunta do operador: {pergunta}")
-])
+# 1. Template: prompt RAG versionado (src/rag/prompt_rag.py) com histórico,
+#    dados operacionais e trechos recuperados da base
+prompt = montar_prompt()
 
 
 # 2. Conexões dos modelos ao Ollama Cloud
 llm = ChatOllama(
     model=model,
-    base_url="https://ollama.com",
-    temperature=0.2,
+    base_url=base_url,
+    temperature=0,      # Sprint 4: resposta presa ao contexto (antes 0.2)
     top_p=0.9,
-    num_predict=512,
+    num_predict=1024,   # antes 512: a resposta agora traz as citações
     client_kwargs={
         "headers": {
             "Authorization": f"Bearer {api_key}"
@@ -64,7 +60,8 @@ llm = ChatOllama(
 
 llm_router = ChatOllama(
     model=model_router,
-    base_url="https://ollama.com",
+    base_url=base_url,
+    temperature=0,
     client_kwargs={
         "headers": {
             "Authorization": f"Bearer {api_key}"
@@ -140,6 +137,17 @@ def exibir_metricas_modelo(
     )
 
 
+# Fonte da resposta da chain estruturada (relatório semanal): vem dos dados, não da base
+FONTE_DADOS_SEMANA = {
+    "texto": "",
+    "documento": "Dados operacionais do posto",
+    "secao": "Histórico dos últimos 7 dias",
+    "pagina": None,
+    "arquivo": "data/mock_data.json",
+    "nota": None,
+}
+
+
 # 6. Processamento principal
 def processar_pergunta(pergunta, session_id):
 
@@ -166,17 +174,42 @@ def processar_pergunta(pergunta, session_id):
 
     if classificacao == "nao_estruturada":
 
+        # Recuperação: trechos da base parecidos com a pergunta (embeddings no Ollama local)
+        inicio_busca = time.perf_counter()
+        try:
+            trechos = recuperar(pergunta)
+        except ConnectionError:
+            return {
+                "resposta": (
+                    "Não consegui consultar a base de conhecimento: o Ollama do computador "
+                    "parece estar fechado. Abra o Ollama e tente de novo."
+                ),
+                "classificacao": classificacao,
+                "fontes": [],
+                "tokens_entrada": 0,
+                "tokens_saida": 0,
+                "tokens_router": tokens_router,
+                "latencia_router": latencia_router,
+                "latencia_busca": time.perf_counter() - inicio_busca,
+                "latencia_resposta": 0,
+                "latencia_total": latencia_router,
+            }
+        latencia_busca = time.perf_counter() - inicio_busca
+        documentos = formatar_para_prompt(trechos)
+        print(f"Trechos recuperados: {len(trechos)} (prompt RAG {VERSAO_PROMPT})")
+
         tokens_entrada = contar_tokens_entrada(
             history,
             pergunta,
             dados_mock
-        )
+        ) + len(enc.encode(documentos))
 
         inicio_resposta = time.perf_counter()
 
         resposta = chain_com_memoria.invoke(
             {
-                "contexto": dados_mock,
+                "dados_operacionais": dados_formatados,
+                "documentos": documentos,
                 "pergunta": pergunta,
             },
             config={
@@ -198,13 +231,16 @@ def processar_pergunta(pergunta, session_id):
         return {
             "resposta": resposta,
             "classificacao": classificacao,
+            "fontes": como_fontes(trechos),
+            "versao_prompt": VERSAO_PROMPT,
             "tokens_entrada": tokens_entrada,
             "tokens_saida": tokens_saida,
             "tokens_router": tokens_router,
             "latencia_router": latencia_router,
+            "latencia_busca": latencia_busca,
             "latencia_resposta": latencia_resposta,
             "latencia_total": (
-                latencia_router + latencia_resposta
+                latencia_router + latencia_busca + latencia_resposta
             ),
         }
 
@@ -230,6 +266,7 @@ def processar_pergunta(pergunta, session_id):
         return {
             "resposta": resposta,
             "classificacao": classificacao,
+            "fontes": [FONTE_DADOS_SEMANA],
             "tokens_entrada": tokens_entrada,
             "tokens_saida": tokens_saida,
             "tokens_router": tokens_router,
@@ -252,6 +289,7 @@ def processar_pergunta(pergunta, session_id):
                 "Por favor, tente novamente."
             ),
             "classificacao": classificacao,
+            "fontes": [],
             "tokens_entrada": 0,
             "tokens_saida": 0,
             "tokens_router": tokens_router,
