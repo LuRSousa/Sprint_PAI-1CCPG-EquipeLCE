@@ -30,9 +30,10 @@ CHUNK_SIZE = 800
 CHUNK_OVERLAP = 120
 
 # Recuperação: quantos trechos vão para o prompt (k) e a nota mínima para um trecho entrar.
-# Valores escolhidos com o teste de busca (evals/teste_busca.py); as iterações do eval podem mudar.
-K = 4
-LIMIAR = 0.68
+# Valores escolhidos com o teste de busca (evals/teste_busca.py). As iterações do eval podem
+# trocar pelo .env (RAG_K e RAG_LIMIAR) sem mexer no código.
+K = int(os.getenv("RAG_K", "4"))
+LIMIAR = float(os.getenv("RAG_LIMIAR", "0.68"))
 
 # Versão do prompt RAG usada pela chain (src/rag/prompt_rag.py). O eval troca para comparar versões.
 VERSAO_PROMPT = os.getenv("RAG_PROMPT_VERSAO", "v1")
