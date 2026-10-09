@@ -99,22 +99,22 @@ MENSAGEM_FORA_ESCOPO = (
 )
 
 MENSAGEM_JURIDICO = (
-    "Nao posso dar orientacao juridica. Esse ponto envolve interpretacao de contrato e legislacao, "
-    "e precisa da avaliacao de um advogado ou do juridico da sua empresa. "
+    "Não posso dar orientação jurídica. Esse ponto envolve interpretação de contrato e legislação, "
+    "e precisa da avaliação de um advogado ou do jurídico da sua empresa. "
     "Posso, sim, levantar os dados operacionais do posto que embasem essa conversa."
 )
 
 MENSAGEM_FINANCEIRO = (
-    "Nao posso dar recomendacao financeira ou de investimento. Decisoes desse tipo exigem um "
+    "Não posso dar recomendação financeira ou de investimento. Decisões desse tipo exigem um "
     "profissional habilitado (contador ou consultor financeiro registrado). "
-    "O que posso fazer e apresentar os numeros de faturamento e consumo do posto."
+    "O que posso fazer é apresentar os números de faturamento e consumo do posto."
 )
 
 MENSAGEM_SEGURANCA_ELETRICA = (
-    "Nao posso orientar intervencao eletrica. Procedimentos em quadro, fiacao, protecao ou limite "
-    "de potencia devem ser executados por eletricista ou engenheiro eletricista habilitado, "
+    "Não posso orientar intervenção elétrica. Procedimentos em quadro, fiação, proteção ou limite "
+    "de potência devem ser executados por eletricista ou engenheiro eletricista habilitado, "
     "seguindo a NR-10 e a norma do fabricante. "
-    "Posso registrar o alerta e mostrar as leituras do carregador para o chamado tecnico."
+    "Posso mostrar as leituras do carregador e os alertas para você abrir o chamado técnico."
 )
 
 
@@ -190,9 +190,8 @@ PADROES_ESPECIFICACAO = [
 ]
 
 MENSAGEM_SEM_BASE = (
-    "Nao tenho essa especificacao na base do ChargeGrid e nao vou inventar numeros de produto. "
-    "Os dados que tenho sao os de operacao do posto (leituras de potencia, sessoes, alertas e "
-    "faturamento). Para especificacao de equipamento, consulte a documentacao oficial GoodWe."
+    "Não tenho essa especificação na base do ChargeGrid e não vou inventar números de produto. "
+    "Para especificação de equipamento, consulte a documentação oficial do fabricante."
 )
 
 

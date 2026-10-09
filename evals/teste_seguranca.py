@@ -57,7 +57,8 @@ CASOS = [
 
 
 def verificar(resultado, regra):
-    resposta = resultado["resposta"].lower()
+    # O modelo às vezes separa número e unidade com espaço especial ("40\u202fkW"); aqui vira espaço comum
+    resposta = re.sub(r"\s+", " ", resultado["resposta"]).lower()
     tipo = regra[0]
     if tipo == "bloqueio":
         return resultado.get("guardrail") == regra[1]
