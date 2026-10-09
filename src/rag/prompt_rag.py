@@ -11,9 +11,9 @@ v1 (derivada do system prompt v2 da Sprint 3):
 - os documentos e os dados entram na mensagem do operador, perto da pergunta,
   e as regras ficam no fim do system prompt (mesma decisão da v2: evitar o "lost in the middle").
 """
-import os
-
 from langchain_core.prompts import ChatPromptTemplate
+
+from rag.config import VERSAO_PROMPT
 
 SISTEMA_V1 = """<system_prompt versao="rag-v1">
 
@@ -87,7 +87,6 @@ Pergunta do operador: {pergunta}"""
 VERSOES = {
     "v1": (SISTEMA_V1, HUMANO_V1),
 }
-VERSAO_PROMPT = os.getenv("RAG_PROMPT_VERSAO", "v1")
 
 
 def montar_prompt(versao: str = VERSAO_PROMPT) -> ChatPromptTemplate:

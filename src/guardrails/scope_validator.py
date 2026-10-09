@@ -2,7 +2,7 @@ import re
 import unicodedata
 from typing import List
 
-from src.guardrails.ResultadoGuardrail import ResultadoGuardrail
+from guardrails.ResultadoGuardrail import ResultadoGuardrail  # Sprint 4: import a partir de src/, como o resto do projeto
 
 TERMOS_ESCOPO = [
     "carregador",
@@ -39,6 +39,17 @@ TERMOS_ESCOPO = [
     "conector",
     "heartbeat",
     "sobrecarga",
+    # Sprint 4: assuntos da base de conhecimento
+    "manual", "faq", "especificacao", "especificacoes", "firmware",
+    "chargeops", "ev chargeops", "painel", "display", "status", "offline", "ocioso", "indisponivel",
+    "reiniciar", "reinicio", "chamado", "chamados", "tecnico", "limite", "limites", "ramal",
+    "conectores", "ccs2", "chademo", "gb/t", "tipo 2", "cabo", "bateria", "wallbox", "plug-in",
+    "tarifas", "tarifaria", "bandeira", "preco", "precos", "custa", "custo", "cobranca", "cobrado",
+    "pagamento", "pagar", "pix", "cartao", "nfc", "qr code", "reembolso", "estorno", "contestar",
+    "ociosidade", "projecao", "relatorio",
+    "condominio", "regimento", "garagem", "vaga", "vagas", "reserva", "reservas", "morador", "sindico",
+    "rateio", "seguranca", "emergencia", "incendio", "fogo", "fumaca", "choque", "bombeiros",
+    "extintor", "alagamento", "nr-10", "nr10",
 ]
 
 TERMOS_JURIDICO = [
@@ -81,9 +92,10 @@ TERMOS_SEGURANCA_ELETRICA = [
 ]
 
 MENSAGEM_FORA_ESCOPO = (
-    "Essa pergunta esta fora do escopo do ChargeGrid Assistant. "
-    "Eu respondo sobre operacao do eletroposto: status dos carregadores, sessoes de recarga, "
-    "potencia e demanda, alertas OCPP e faturamento. Posso ajudar em algum desses pontos?"
+    "Essa pergunta está fora do escopo do ChargeGrid Assistant. "
+    "Eu respondo sobre a operação do eletroposto: status dos carregadores, sessões de recarga, "
+    "potência e demanda, alertas, faturamento, tarifas, procedimentos e segurança do posto, "
+    "e o regimento de recarga em condomínio. Posso ajudar em algum desses pontos?"
 )
 
 MENSAGEM_JURIDICO = (
@@ -113,7 +125,9 @@ def normalizar(texto: str) -> str:
 
 
 def _contem(texto: str, termos: List[str]) -> bool:
-    return any(termo in texto for termo in termos)
+    # Sprint 4: compara palavra inteira. Antes era "termo in texto", e o termo "ev"
+    # aparecia dentro de qualquer palavra ("descreve", "levar"), deixando quase tudo no escopo.
+    return any(re.search(rf"(?<!\w){re.escape(termo)}(?!\w)", texto) for termo in termos)
 
 
 def dentro_do_escopo(pergunta: str) -> bool:
@@ -123,7 +137,13 @@ def dentro_do_escopo(pergunta: str) -> bool:
     return _contem(texto, TERMOS_ESCOPO)
 
 
-def validar_escopo(pergunta: str) -> ResultadoGuardrail:
+def validar_escopo(pergunta: str, contexto_relevante: bool = False) -> ResultadoGuardrail:
+    """Bloqueia pedidos de risco (elétrico, jurídico, financeiro) e perguntas fora do escopo.
+
+    contexto_relevante (Sprint 4): a busca achou trecho relevante na base ou a pergunta continua
+    uma conversa. Nesses casos, faltar palavra-chave não basta para recusar ("E o 4?",
+    "como eu pago?"); quem decide se está fora do escopo é o prompt RAG (regra 5).
+    """
     texto = normalizar(pergunta)
 
     if _contem(texto, TERMOS_SEGURANCA_ELETRICA):
@@ -150,7 +170,7 @@ def validar_escopo(pergunta: str) -> ResultadoGuardrail:
             mensagem_usuario=MENSAGEM_FINANCEIRO,
         )
 
-    if not dentro_do_escopo(pergunta):
+    if not dentro_do_escopo(pergunta) and not contexto_relevante:
         return ResultadoGuardrail(
             bloqueada=True,
             categoria="fora_escopo",
@@ -177,6 +197,9 @@ MENSAGEM_SEM_BASE = (
 
 
 def exige_especificacao_inexistente(pergunta: str) -> ResultadoGuardrail:
+    # Sprint 4: não é mais chamada. Com a base de manuais e especificações, bloquear
+    # "manual do..." ou "ficha técnica do..." impediria justamente as perguntas que o RAG responde.
+    # A recusa de especificação que não está na base passou para o prompt RAG (regra 3).
     texto = normalizar(pergunta)
     for padrao in PADROES_ESPECIFICACAO:
         if re.search(padrao, texto):

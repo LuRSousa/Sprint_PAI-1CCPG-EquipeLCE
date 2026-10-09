@@ -2,12 +2,22 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Lê o .env da raiz antes de tudo, para OLLAMA_EMBED_URL, RAG_COLECAO e RAG_PROMPT_VERSAO valerem
+load_dotenv()
+
 # src/rag/config.py -> parents[2] é a raiz do projeto
 RAIZ = Path(__file__).resolve().parents[2]
 
 PASTA_BASE = RAIZ / "data" / "knowledge_base"   # PDFs da base de conhecimento
 PASTA_CHROMA = RAIZ / "chroma_db"                # banco vetorial (está no .gitignore)
-COLECAO = "chargegrid_kb"                        # nome da coleção dentro do Chroma
+# Coleção usada pelo assistente. O teste de segurança troca pela coleção com o documento de injeção.
+COLECAO = os.getenv("RAG_COLECAO", "chargegrid_kb")
+
+# Documento de teste com injeção plantada: fica fora da base e só entra na coleção de teste
+PASTA_TESTE_INJECAO = RAIZ / "evals" / "documentos_teste"
+COLECAO_TESTE_INJECAO = "teste_injecao"
 
 # Embeddings: nomic-embed-text no Ollama do próprio PC.
 # No teste do bloco 0, o Ollama Cloud recusou esse modelo (401) com a mesma chave que funciona no chat.
@@ -23,3 +33,6 @@ CHUNK_OVERLAP = 120
 # Valores escolhidos com o teste de busca (evals/teste_busca.py); as iterações do eval podem mudar.
 K = 4
 LIMIAR = 0.68
+
+# Versão do prompt RAG usada pela chain (src/rag/prompt_rag.py). O eval troca para comparar versões.
+VERSAO_PROMPT = os.getenv("RAG_PROMPT_VERSAO", "v1")

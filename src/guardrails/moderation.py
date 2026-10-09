@@ -1,12 +1,10 @@
 import re
 from typing import List
 
-from src.guardrails.scope_validator import (
-    exige_especificacao_inexistente,
-    normalizar,
-    validar_escopo,
-)
-from src.guardrails.ResultadoGuardrail import ResultadoGuardrail
+# Sprint 4: imports a partir de src/, como o resto do projeto (antes "from src.guardrails...",
+# que só funcionava rodando da raiz e fazia os guardrails nunca serem carregados pelo app)
+from guardrails.scope_validator import normalizar, validar_escopo
+from guardrails.ResultadoGuardrail import ResultadoGuardrail
 
 PADROES_JAILBREAK: List[str] = [
     r"ignore (?:todas )?as (?:instrucoes|regras|orientacoes)",
@@ -27,7 +25,9 @@ PADROES_JAILBREAK: List[str] = [
 ]
 
 PADROES_INJECAO: List[str] = [
-    r"(?:mostre|revele|imprima|repita|exiba|me de) (?:o |seu |todo o )?(?:system ?prompt|prompt do sistema|prompt inicial)",
+    # Sprint 4: aceita mais de um artigo/possessivo ("mostre o seu prompt do sistema" passava)
+    r"(?:mostre|revele|imprima|repita|exiba|me de|me mostre) (?:(?:o|a|os|as|seu|sua|seus|suas|todo|toda) )*"
+    r"(?:system ?prompt|prompt do sistema|prompt inicial|instrucoes (?:internas|do sistema))",
     r"quais sao (?:as )?suas instrucoes",
     r"repita (?:tudo )?(?:o que|que) (?:esta|foi) (?:escrito )?(?:acima|antes|no inicio)",
     r"<\s*/?\s*(?:system|instrucoes|instructions|contexto_operacional)\s*>",
@@ -45,14 +45,15 @@ PADROES_INJECAO: List[str] = [
 ]
 
 MENSAGEM_JAILBREAK = (
-    "Nao vou seguir instrucoes que tentem alterar meu papel ou remover minhas regras. "
+    "Não vou seguir instruções que tentem alterar meu papel ou remover minhas regras. "
     "Eu sou o ChargeGrid Assistant e opero dentro do escopo do eletroposto. "
-    "Se precisar de status de carregadores, sessoes, demanda, alertas ou faturamento, e so pedir."
+    "Se precisar de status de carregadores, sessões, demanda, alertas, faturamento ou "
+    "procedimentos do posto, é só pedir."
 )
 
 MENSAGEM_INJECAO = (
-    "Nao compartilho minhas instrucoes internas nem executo comandos vindos do texto da conversa. "
-    "Posso seguir ajudando com os dados operacionais do posto."
+    "Não compartilho minhas instruções internas nem executo comandos vindos do texto da conversa. "
+    "Posso seguir ajudando com os dados e os procedimentos do posto."
 )
 
 
@@ -64,6 +65,19 @@ def detectar_jailbreak(texto: str) -> bool:
 def detectar_injecao(texto: str) -> bool:
     alvo = normalizar(texto)
     return any(re.search(padrao, alvo) for padrao in PADROES_INJECAO)
+
+
+def trecho_suspeito(texto: str) -> str | None:
+    """Sprint 4: o pedaço do texto que bate com algum padrão de jailbreak ou injeção (ou None).
+
+    Usado na ingestão para tirar do banco os trechos de documento com cara de instrução.
+    """
+    alvo = normalizar(texto)
+    for padrao in PADROES_JAILBREAK + PADROES_INJECAO:
+        achado = re.search(padrao, alvo)
+        if achado:
+            return achado.group(0)
+    return None
 
 
 def moderar(pergunta: str) -> ResultadoGuardrail:
@@ -86,27 +100,32 @@ def moderar(pergunta: str) -> ResultadoGuardrail:
     return ResultadoGuardrail(bloqueada=False)
 
 
-def aplicar_guardrails(pergunta: str) -> ResultadoGuardrail:
+def aplicar_guardrails(pergunta: str, contexto_relevante: bool = False) -> ResultadoGuardrail:
+    """Guardrails de entrada: jailbreak e injeção primeiro, depois o escopo.
+
+    Sprint 4: saiu a checagem de especificação por palavra-chave ("manual do...", "ficha técnica
+    do..."), que bloquearia as perguntas que a base agora responde. Quem recusa especificação
+    que não está na base é o prompt RAG (regra 3).
+    """
     resultado = moderar(pergunta)
     if resultado.bloqueada:
         return resultado
 
-    resultado = exige_especificacao_inexistente(pergunta)
-    if resultado.bloqueada:
-        return resultado
-
-    return validar_escopo(pergunta)
+    return validar_escopo(pergunta, contexto_relevante=contexto_relevante)
 
 
 PADROES_SAIDA_SUSPEITA = [
     r"system ?prompt",
     r"minhas instrucoes internas sao",
     r"api[_ ]?key",
+    # Sprint 4: pedaços do prompt RAG que nunca deveriam aparecer numa resposta
+    r"<\s*/?\s*(?:system_prompt|regras|identidade|fontes_de_informacao|exemplo_de_formato)\b",
+    r"rag-v\d",
 ]
 
 MENSAGEM_SAIDA_FILTRADA = (
-    "Detectei conteudo interno na resposta gerada e preferi nao exibi-la. "
-    "Pode reformular a pergunta sobre a operacao do posto?"
+    "Detectei conteúdo interno na resposta gerada e preferi não exibi-la. "
+    "Pode reformular a pergunta sobre a operação do posto?"
 )
 
 
