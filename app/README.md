@@ -54,6 +54,7 @@ Cada resposta traz a citação no texto e, embaixo, o botão **Fontes** com o do
 | `python evals/teste_busca.py` | se a busca acha a seção certa (sem LLM), com as notas de similaridade |
 | `python evals/perguntar.py "sua pergunta"` | a resposta pelo terminal, com os trechos usados |
 | `python src/rag/ingestao.py --incluir-teste-injecao` e depois `python evals/teste_seguranca.py` | injeção vinda de documento, ataques na pergunta, escopo e especificação inexistente |
+| `python evals/avaliar.py --iteracao 1` | o eval completo: 24 perguntas com gabarito, verificações automáticas e RAGAS (faithfulness e answer relevancy). Detalhes em `evals/README.md` |
 
 Os resultados ficam em `evals/resultados/`.
 
