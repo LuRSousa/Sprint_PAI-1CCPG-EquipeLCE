@@ -10,7 +10,7 @@ Formas comparadas:
   híbrida             semântica + BM25, juntas pelo Reciprocal Rank Fusion
   vetorial + consulta busca semântica com a pergunta completada pela conversa e pelos dados
   híbrida + consulta  as duas coisas (iteração 3 do eval)
-  ... BM25 peso 2     a mesma, dando o dobro de peso à lista do BM25 na fusão
+  intercalada + consulta  semântica + BM25 com as vagas divididas entre as duas (iteração 4)
 
 Também confere as perguntas fora do domínio: quantos trechos passariam para o prompt
 (o ideal é nenhum, para o guardrail de escopo continuar barrando).
@@ -35,7 +35,7 @@ from recursos import _carregar_dados_mock  # noqa: E402
 
 EVAL_SET = RAIZ / "evals" / "eval_set_sprint4.json"
 DESTINO = RAIZ / "evals" / "resultados" / "teste_busca_eval.md"
-FORMAS = ["vetorial", "bm25", "híbrida", "vetorial + consulta", "híbrida + consulta", "... BM25 peso 2"]
+FORMAS = ["vetorial", "bm25", "híbrida", "vetorial + consulta", "híbrida + consulta", "intercalada + consulta"]
 
 
 def _bate(trecho_arquivo: str, trecho_secao: str, esperadas) -> bool:
@@ -54,13 +54,11 @@ def _bm25(texto: str, k: int):
 
 
 def buscar_por_forma(forma: str, pergunta: str, historico, dados) -> list[tuple[str, str]]:
-    com_consulta = forma.endswith("consulta") or forma.startswith("...")
-    texto = montar_consulta(pergunta, historico, dados) if com_consulta else pergunta
+    texto = montar_consulta(pergunta, historico, dados) if forma.endswith("consulta") else pergunta
     if forma == "bm25":
         return _bm25(texto, K)
-    busca = "vetorial" if forma.startswith("vetorial") else "hibrida"
-    peso = 2.0 if "peso 2" in forma else 1.0
-    return [(t.arquivo, t.secao) for t in recuperar(texto, busca=busca, peso_bm25=peso)]
+    busca = forma.split(" ")[0].replace("í", "i")  # "vetorial", "hibrida" ou "intercalada"
+    return [(t.arquivo, t.secao) for t in recuperar(texto, busca=busca)]
 
 
 def main():

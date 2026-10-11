@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Lê o .env da raiz antes de tudo, para OLLAMA_EMBED_URL, RAG_COLECAO e RAG_PROMPT_VERSAO valerem
+# Lê o .env da raiz antes de tudo, para as variáveis OLLAMA_EMBED_URL e RAG_* valerem
 load_dotenv()
 
 # src/rag/config.py -> parents[2] é a raiz do projeto
@@ -35,8 +35,11 @@ CHUNK_OVERLAP = 120
 K = int(os.getenv("RAG_K", "4"))
 LIMIAR = float(os.getenv("RAG_LIMIAR", "0.68"))
 
-# Versão do prompt RAG usada pela chain (src/rag/prompt_rag.py). O eval troca para comparar versões.
-VERSAO_PROMPT = os.getenv("RAG_PROMPT_VERSAO", "v1")
+# Versão do prompt RAG usada pela chain (src/rag/prompt_rag.py). A v2 ganhou da v1 no eval
+# (evals/resultados/comparativo.md); o eval troca a versão para comparar.
+VERSAO_PROMPT = os.getenv("RAG_PROMPT_VERSAO", "v2")
 
-# Modo da busca (src/rag/retriever.py): "vetorial" (só semântica) ou "hibrida" (semântica + BM25).
-BUSCA = os.getenv("RAG_BUSCA", "vetorial")
+# Modo da busca (src/rag/retriever.py): "vetorial" (só semântica), "hibrida" (semântica + BM25,
+# fusão RRF) ou "intercalada" (semântica + BM25, vagas divididas entre as duas).
+# A intercalada ganhou no eval (iteração 4): trouxe uma seção esperada em 14 das 15 perguntas.
+BUSCA = os.getenv("RAG_BUSCA", "intercalada")

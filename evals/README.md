@@ -27,7 +27,10 @@ python evals/avaliar.py --iteracao 0               # Sprint 3, sem RAG
 python evals/avaliar.py --iteracao 1               # RAG + prompt v1
 python evals/avaliar.py --iteracao 2               # RAG + prompt v2
 python evals/avaliar.py --iteracao 3               # RAG + prompt v2 + busca híbrida
+python evals/avaliar.py --iteracao 4               # RAG + prompt v2 + busca intercalada
 ```
+
+Cada iteração fixa a sua versão do prompt e a sua busca antes de carregar o assistente. A configuração que venceu (iteração 4: prompt v2 + busca intercalada) virou o padrão do app em `src/rag/config.py`, e isso não muda o que as iterações anteriores medem.
 
 | Opção | O que faz |
 |---|---|
@@ -43,7 +46,7 @@ Uma iteração completa faz perto de 150 chamadas ao Ollama Cloud: umas 50 do as
 
 ## Qualidade da busca
 
-`python evals/teste_busca_eval.py` mostra, sem chamar LLM, em quais perguntas do eval set cada forma de busca traz uma seção esperada entre os trechos do prompt: só semântica, só palavra-chave (BM25), híbrida, e cada uma com a pergunta completada pela conversa e pelos dados (`src/rag/consulta.py`). Também confere se as perguntas fora do domínio continuam sem trecho nenhum. O resultado fica em `resultados/teste_busca_eval.md`.
+`python evals/teste_busca_eval.py` mostra, sem chamar LLM, em quais perguntas do eval set cada forma de busca traz uma seção esperada entre os trechos do prompt: só semântica, só palavra-chave (BM25), híbrida pela RRF, híbrida intercalada (vagas divididas entre as duas buscas), e com a pergunta completada pela conversa e pelos dados (`src/rag/consulta.py`). Também confere se as perguntas fora do domínio continuam sem trecho nenhum. O resultado fica em `resultados/teste_busca_eval.md`.
 
 ## O que é medido
 

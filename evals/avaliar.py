@@ -14,7 +14,8 @@ Iterações:
     0  Sprint 3, sem RAG (evals/sprint3_baseline.py)
     1  RAG + prompt v1 (busca vetorial)
     2  RAG + prompt v2 (busca vetorial)
-    3  RAG + prompt v2 + busca híbrida (semântica + BM25, com a pergunta completada pela conversa e pelos dados)
+    3  RAG + prompt v2 + busca híbrida (semântica + BM25 pela RRF, com a pergunta completada pela conversa e pelos dados)
+    4  RAG + prompt v2 + busca intercalada (as mesmas duas buscas, com as vagas divididas entre elas)
 
 Notas de cada item:
 - comportamento: respondeu quando devia responder; recusou quando devia recusar;
@@ -64,6 +65,7 @@ ITERACOES = {
     1: {"nome": "RAG + prompt v1", "modo": "rag", "prompt": "v1", "busca": "vetorial"},
     2: {"nome": "RAG + prompt v2", "modo": "rag", "prompt": "v2", "busca": "vetorial"},
     3: {"nome": "RAG + prompt v2 + busca híbrida", "modo": "rag", "prompt": "v2", "busca": "hibrida"},
+    4: {"nome": "RAG + prompt v2 + busca intercalada", "modo": "rag", "prompt": "v2", "busca": "intercalada"},
 }
 
 # Palavra que identifica cada documento numa citação (pelo número do arquivo)

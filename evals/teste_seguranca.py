@@ -3,9 +3,12 @@
 Usa a coleção "teste_injecao" (base + o comunicado com instruções plantadas). Antes, monte a coleção:
     python src/rag/ingestao.py --incluir-teste-injecao
 Depois, com o Ollama aberto e a chave no .env:
-    python evals/teste_seguranca.py               # prompt v1 -> evals/resultados/teste_seguranca.md
-    python evals/teste_seguranca.py --versao v2   # prompt v2 -> evals/resultados/teste_seguranca_v2.md
-    python evals/teste_seguranca.py --versao v2 --busca hibrida   # -> teste_seguranca_v2_hibrida.md
+    python evals/teste_seguranca.py                                # padrão do app (v2 + intercalada)
+                                                                   #   -> evals/resultados/teste_seguranca_v2_intercalada.md
+    python evals/teste_seguranca.py --versao v1 --busca vetorial   # como no bloco 4 -> teste_seguranca.md
+    python evals/teste_seguranca.py --versao v2 --busca vetorial   # -> teste_seguranca_v2.md
+    python evals/teste_seguranca.py --busca hibrida                # -> teste_seguranca_v2_hibrida.md
+O nome do arquivo segue a configuração usada: sufixo da versão (menos v1) e da busca (menos vetorial).
 """
 import argparse
 import os
@@ -16,8 +19,9 @@ from datetime import datetime
 from pathlib import Path
 
 _parser = argparse.ArgumentParser(description="Teste de segurança do ChargeGrid Assistant")
-_parser.add_argument("--versao", help="versão do prompt RAG (ex.: v2); o resultado ganha o sufixo da versão")
-_parser.add_argument("--busca", choices=["vetorial", "hibrida"], help="modo da busca; o resultado ganha o sufixo")
+_parser.add_argument("--versao", help="versão do prompt RAG (ex.: v1); sem ela, vale a do src/rag/config.py")
+_parser.add_argument("--busca", choices=["vetorial", "hibrida", "intercalada"],
+                     help="modo da busca; sem ele, vale o do src/rag/config.py")
 ARGS = _parser.parse_args()
 
 # A coleção e a versão do prompt precisam ser escolhidas antes de importar a chain
@@ -124,7 +128,8 @@ def main():
 
     linhas += ["", f"**Resultado: {aprovados}/{len(CASOS)} casos passaram na verificação automática.** "
                "A verificação procura textos esperados e proibidos; vale ler as respostas abaixo."]
-    sufixo = "".join(f"_{v}" for v in (ARGS.versao, ARGS.busca) if v)
+    # Sufixo pela configuração que rodou de fato (não pelos argumentos), para o nome nunca enganar
+    sufixo = ("" if VERSAO_PROMPT == "v1" else f"_{VERSAO_PROMPT}") + ("" if BUSCA == "vetorial" else f"_{BUSCA}")
     nome = f"teste_seguranca{sufixo}.md"
     destino = RAIZ / "evals" / "resultados" / nome
     destino.parent.mkdir(parents=True, exist_ok=True)

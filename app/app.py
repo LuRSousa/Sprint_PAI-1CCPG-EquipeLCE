@@ -132,8 +132,11 @@ def _renderizar_sidebar():
         try:
             info = info_colecao()
             st.caption(f"Coleção `{COLECAO}`: {info['chunks']} trechos")
-            st.caption(f"Busca {'híbrida (semântica + palavra-chave)' if BUSCA == 'hibrida' else 'semântica'}: "
-                       f"{K} trechos por pergunta, nota mínima {LIMIAR:.2f}")
+            if BUSCA == "vetorial":
+                st.caption(f"Busca semântica: {K} trechos por pergunta, nota mínima {LIMIAR:.2f}")
+            else:
+                st.caption(f"Busca híbrida ({'intercalada' if BUSCA == 'intercalada' else 'RRF'}): semântica + "
+                           f"palavra-chave, {K} trechos por pergunta (nota mínima {LIMIAR:.2f} ou 2+ palavras da pergunta)")
             st.caption(f"Prompt RAG `{VERSAO_PROMPT}` · embeddings `nomic-embed-text` (Ollama local)")
         except Exception:
             st.warning("Base ainda não indexada. Rode `python src/rag/ingestao.py` com o Ollama aberto.")
@@ -238,10 +241,13 @@ def _mostrar_fontes(msg):
             texto = fonte["texto"].replace("\n", " ")
             if len(texto) > 420:
                 texto = texto[:420].rsplit(" ", 1)[0] + "…"
+            # Na busca híbrida, mostra quem achou o trecho: um trecho achado só pela palavra-chave
+            # pode ter similaridade abaixo do limiar
+            achado = f' · achado pela busca: {fonte["origem"]}' if BUSCA != "vetorial" and fonte.get("origem") else ""
             # html.escape: o texto vem de PDF, e um PDF não pode injetar HTML na tela
             st.markdown(
                 f'<div class="cg-fonte"><b>{html.escape(fonte["documento"])}</b> · seção '
-                f'{html.escape(fonte["secao"])} · p. {fonte["pagina"]} · similaridade {fonte["nota"]:.2f}'
+                f'{html.escape(fonte["secao"])} · p. {fonte["pagina"]} · similaridade {fonte["nota"]:.2f}{achado}'
                 f'<br>{html.escape(texto)}</div>',
                 unsafe_allow_html=True,
             )

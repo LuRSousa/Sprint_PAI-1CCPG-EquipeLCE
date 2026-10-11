@@ -45,16 +45,17 @@ O esperado: `PDFs lidos: 7 | páginas: 19`, `Varredura de injeção: 0 trecho(s)
 streamlit run app/app.py
 ```
 
-Cada resposta traz a citação no texto e, embaixo, o botão **Fontes** com o documento, a seção, a página, a similaridade e o trecho usado. Quando um guardrail responde no lugar do modelo, aparece qual foi.
+Cada resposta traz a citação no texto e, embaixo, o botão **Fontes** com o documento, a seção, a página, a similaridade, qual busca achou o trecho (semântica, palavra-chave ou as duas) e o trecho usado. Quando um guardrail responde no lugar do modelo, aparece qual foi.
 
 ## 5. Testes
 
 | Comando | O que mostra |
 |---|---|
-| `python evals/teste_busca.py` | se a busca acha a seção certa (sem LLM), com as notas de similaridade |
+| `python evals/teste_busca.py` | se a busca semântica acha a seção certa (sem LLM), com as notas de similaridade |
+| `python evals/teste_busca_eval.py` | as formas de busca lado a lado nas perguntas do eval set (sem LLM) |
 | `python evals/perguntar.py "sua pergunta"` | a resposta pelo terminal, com os trechos usados |
 | `python src/rag/ingestao.py --incluir-teste-injecao` e depois `python evals/teste_seguranca.py` | injeção vinda de documento, ataques na pergunta, escopo e especificação inexistente |
-| `python evals/avaliar.py --iteracao 1` | o eval completo: 24 perguntas com gabarito, verificações automáticas e RAGAS (faithfulness e answer relevancy). Detalhes em `evals/README.md` |
+| `python evals/avaliar.py --iteracao 4` | o eval completo na configuração do app: 24 perguntas com gabarito, verificações automáticas e RAGAS (faithfulness e answer relevancy). As iterações 0 a 3 são as versões anteriores; detalhes em `evals/README.md` |
 
 Os resultados ficam em `evals/resultados/`.
 
@@ -63,10 +64,12 @@ Os resultados ficam em `evals/resultados/`.
 ```
 pergunta
   → guardrail de entrada (jailbreak, injeção)
-  → busca no Chroma: 4 trechos mais parecidos, só os com nota ≥ 0,68
+  → busca híbrida intercalada: semântica (Chroma) + palavra-chave (BM25), com a pergunta
+    completada pela conversa e pelos dados do posto; 4 trechos, alternando as duas buscas,
+    só os com nota ≥ 0,68 ou com 2+ palavras da pergunta
   → guardrail de escopo e de pedidos de risco
   → router: relatório semanal (chain estruturada) ou conversa (chain RAG)
-  → prompt RAG versionado: dados do posto + trechos com documento, seção e página
+  → prompt RAG v2 (versionado): dados do posto + trechos com documento, seção e página
   → gpt-oss:120b (temperature 0) com memória da conversa
   → guardrail de saída (vazamento de instruções)
   → resposta com citação + fontes na tela
@@ -74,7 +77,7 @@ pergunta
 
 | Pasta | O que tem |
 |---|---|
-| `src/rag/` | `loader.py`, `chunking.py`, `embeddings.py`, `vector_store.py`, `retriever.py`, `prompt_rag.py`, `varredura.py`, `ingestao.py` e `config.py` (todos os parâmetros num lugar só) |
+| `src/rag/` | `loader.py`, `chunking.py`, `embeddings.py`, `vector_store.py`, `retriever.py` (com `bm25.py` e `consulta.py`), `prompt_rag.py`, `varredura.py`, `ingestao.py` e `config.py` (todos os parâmetros num lugar só) |
 | `src/chain/` | router, chain estruturada, memória e `builder.py`, que liga tudo |
 | `src/guardrails/` | moderação (jailbreak e injeção), escopo e filtro de saída |
 | `data/knowledge_base/` | os 7 PDFs simulados da base, com um README explicando como foram montados |

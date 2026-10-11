@@ -202,10 +202,10 @@ def processar_pergunta(pergunta, session_id):
         return _resultado(bloqueio.mensagem_usuario, "bloqueada", guardrail=bloqueio.categoria)
 
     # 2. Recuperação: trechos da base parecidos com a pergunta (embeddings no Ollama local).
-    #    Na busca híbrida, o texto da busca é a pergunta completada com a conversa e os dados do
+    #    Nas buscas híbridas, o texto da busca é a pergunta completada com a conversa e os dados do
     #    posto (rag/consulta.py); o modelo continua recebendo a pergunta original.
     inicio_busca = time.perf_counter()
-    consulta = montar_consulta(pergunta, history, dados_mock) if BUSCA == "hibrida" else pergunta
+    consulta = montar_consulta(pergunta, history, dados_mock) if BUSCA != "vetorial" else pergunta
     try:
         trechos = recuperar(consulta)
     except ConnectionError:
