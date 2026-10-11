@@ -13,7 +13,7 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from chain.builder import processar_pergunta, llm  # noqa: E402
-from rag.config import COLECAO, K, LIMIAR, VERSAO_PROMPT  # noqa: E402
+from rag.config import BUSCA, COLECAO, K, LIMIAR, VERSAO_PROMPT  # noqa: E402
 from rag.vector_store import info_colecao  # noqa: E402
 
 
@@ -132,7 +132,8 @@ def _renderizar_sidebar():
         try:
             info = info_colecao()
             st.caption(f"Coleção `{COLECAO}`: {info['chunks']} trechos")
-            st.caption(f"Busca: {K} trechos por pergunta, nota mínima {LIMIAR:.2f}")
+            st.caption(f"Busca {'híbrida (semântica + palavra-chave)' if BUSCA == 'hibrida' else 'semântica'}: "
+                       f"{K} trechos por pergunta, nota mínima {LIMIAR:.2f}")
             st.caption(f"Prompt RAG `{VERSAO_PROMPT}` · embeddings `nomic-embed-text` (Ollama local)")
         except Exception:
             st.warning("Base ainda não indexada. Rode `python src/rag/ingestao.py` com o Ollama aberto.")

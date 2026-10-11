@@ -12,8 +12,9 @@ Na raiz do projeto, com o venv ativo e o Ollama aberto:
 
 Iterações:
     0  Sprint 3, sem RAG (evals/sprint3_baseline.py)
-    1  RAG + prompt v1
-    2  RAG + prompt v2
+    1  RAG + prompt v1 (busca vetorial)
+    2  RAG + prompt v2 (busca vetorial)
+    3  RAG + prompt v2 + busca híbrida (semântica + BM25, com a pergunta completada pela conversa e pelos dados)
 
 Notas de cada item:
 - comportamento: respondeu quando devia responder; recusou quando devia recusar;
@@ -60,8 +61,9 @@ PASTA_RESULTADOS = RAIZ / "evals" / "resultados"
 
 ITERACOES = {
     0: {"nome": "Sprint 3 (sem RAG)", "modo": "sprint3"},
-    1: {"nome": "RAG + prompt v1", "modo": "rag", "prompt": "v1"},
-    2: {"nome": "RAG + prompt v2", "modo": "rag", "prompt": "v2"},
+    1: {"nome": "RAG + prompt v1", "modo": "rag", "prompt": "v1", "busca": "vetorial"},
+    2: {"nome": "RAG + prompt v2", "modo": "rag", "prompt": "v2", "busca": "vetorial"},
+    3: {"nome": "RAG + prompt v2 + busca híbrida", "modo": "rag", "prompt": "v2", "busca": "hibrida"},
 }
 
 # Palavra que identifica cada documento numa citação (pelo número do arquivo)
@@ -235,7 +237,8 @@ def carregar_assistente(iteracao: int):
         return s3.processar_pergunta, (lambda fontes: [s3.CONTEXTO]), info
 
     os.environ["RAG_PROMPT_VERSAO"] = cfg["prompt"]
-    from rag.config import COLECAO, K, LIMIAR, MODELO_EMBEDDING
+    os.environ["RAG_BUSCA"] = cfg["busca"]
+    from rag.config import BUSCA, COLECAO, K, LIMIAR, MODELO_EMBEDDING
     from rag.vector_store import info_colecao
     info_colecao(COLECAO)  # para logo se a coleção não existir (falta rodar a ingestão)
     from chain import builder
@@ -249,7 +252,7 @@ def carregar_assistente(iteracao: int):
 
     info = {"versao_prompt": cfg["prompt"], "modelo": builder.model, "temperature": builder.llm.temperature,
             "top_p": builder.llm.top_p, "num_predict": builder.llm.num_predict, "modelo_router": builder.model_router,
-            "colecao": COLECAO, "k": K, "limiar": LIMIAR, "embedding": MODELO_EMBEDDING}
+            "colecao": COLECAO, "k": K, "limiar": LIMIAR, "embedding": MODELO_EMBEDDING, "busca": BUSCA}
     return builder.processar_pergunta, contextos, info
 
 
@@ -274,8 +277,9 @@ def rodar_item(processar, contextos, item: dict, iteracao: int, com_rag: bool) -
         "resposta": r["resposta"],
         "classificacao": r.get("classificacao"),
         "guardrail": r.get("guardrail"),
-        "fontes": [{k: f.get(k) for k in ("documento", "secao", "pagina", "arquivo", "nota")}
+        "fontes": [{k: f.get(k) for k in ("documento", "secao", "pagina", "arquivo", "nota", "origem")}
                    for f in r.get("fontes", []) if f.get("texto")],
+        "consulta_busca": r.get("consulta_busca") if r.get("consulta_busca") != item["turnos"][-1] else None,
         "contextos": contextos(r.get("fontes", [])),
         "latencia_s": round(latencia, 2),
         "tokens_entrada": sum(t.get("input_tokens", 0) for t in tokens),
@@ -392,6 +396,10 @@ def resumir(resultados: list[dict]) -> dict:
     responder = lambda r: r["esperado"] == "responder"  # noqa: E731
     recusar = lambda r: r["esperado"] == "recusar"  # noqa: E731
     fid, n_fid = _media([r.get("ragas", {}).get("faithfulness") for r in resultados])
+    # Recusa ("não encontrei...") não afirma nada sobre o posto, mas o juiz conta a própria recusa como
+    # afirmação sem apoio. Esta segunda média mostra a faithfulness só do que o assistente respondeu.
+    fid_dadas, n_fid_dadas = _media([r.get("ragas", {}).get("faithfulness") for r in resultados
+                                     if r["verificacoes"].get("comportamento")])
     rel, n_rel = _media([r.get("ragas", {}).get("answer_relevancy") for r in resultados])
     lat, _ = _media([r["latencia_s"] for r in resultados])
     tok_e, _ = _media([r["tokens_entrada"] for r in resultados])
@@ -405,6 +413,7 @@ def resumir(resultados: list[dict]) -> dict:
         "citacao_certa": contar("citacao_certa"),
         "busca": contar("busca"),
         "faithfulness": (fid, n_fid),
+        "faithfulness_respostas": (fid_dadas, n_fid_dadas),
         "answer_relevancy": (rel, n_rel),
         "latencia_media_s": lat,
         "tokens_entrada_medio": tok_e,
@@ -424,8 +433,8 @@ LINHAS_RESUMO = [
 
 
 def _valor_resumo(resumo, chave):
-    if chave in ("faithfulness", "answer_relevancy"):
-        media, n = resumo[chave]
+    if chave in ("faithfulness", "faithfulness_respostas", "answer_relevancy"):
+        media, n = resumo.get(chave, (None, 0))
         return f"{_fmt(media)} (n={n})" if n else "–"
     if chave == "latencia_media_s":
         return f"{_fmt(resumo[chave], 1)} s" if resumo[chave] is not None else "–"
@@ -436,6 +445,7 @@ def _valor_resumo(resumo, chave):
 
 TODAS_AS_LINHAS = LINHAS_RESUMO + [
     ("faithfulness", "RAGAS faithfulness (média)"),
+    ("faithfulness_respostas", "… só das respostas dadas (sem as recusas)"),
     ("answer_relevancy", "RAGAS answer relevancy (média)"),
     ("latencia_media_s", "Latência média por pergunta"),
     ("tokens_entrada_medio", "Tokens de entrada por pergunta (média)"),
@@ -459,8 +469,8 @@ def escrever_markdown(dados: dict, caminho: Path) -> None:
         f"- Modelo: `{info.get('modelo')}` (temperature {info.get('temperature'):g}) · prompt: {info.get('versao_prompt')}",
     ]
     if info.get("colecao"):
-        linhas.append(f"- Base: coleção `{info['colecao']}`, k = {info['k']}, limiar {info['limiar']}, "
-                      f"embedding `{info.get('embedding')}`")
+        linhas.append(f"- Base: coleção `{info['colecao']}`, busca {info.get('busca', 'vetorial')}, k = {info['k']}, "
+                      f"limiar {info['limiar']}, embedding `{info.get('embedding')}`")
     else:
         linhas.append("- Sem base de conhecimento (o modelo só recebe o mock_data.json)")
     linhas.append(f"- Juiz do RAGAS: `{dados.get('juiz') or 'não rodou'}`")
@@ -508,6 +518,8 @@ def escrever_markdown(dados: dict, caminho: Path) -> None:
         ]
         if len(r["turnos"]) > 1:
             linhas += ["Conversa: " + " → ".join(r["turnos"]), ""]
+        if r.get("consulta_busca"):
+            linhas += [f"*Texto usado na busca:* {r['consulta_busca']}", ""]
         linhas += [
             r["resposta"].strip(),
             "",
@@ -543,7 +555,7 @@ def escrever_comparativo() -> Path | None:
         "|---|" + "---|" * len(completas),
     ]
     for chave, rotulo in TODAS_AS_LINHAS:
-        linhas.append(f"| {rotulo} | " + " | ".join(_valor_resumo(d["resumo"], chave) for d in completas) + " |")
+        linhas.append(f"| {rotulo} | " + " | ".join(_valor_resumo(resumir(d["itens"]), chave) for d in completas) + " |")
     linhas += ["", "## Item a item (comportamento · fatos)", "",
                "| Item | " + " | ".join(f"Iteração {d['iteracao']}" for d in completas) + " |",
                "|---|" + "---|" * len(completas)]
@@ -591,7 +603,7 @@ def escrever_comparativo_modelos() -> Path | None:
                               ("num_predict", "max_tokens (num_predict)"), ("k", "k (trechos)")):
             linhas.append(f"| {rotulo} | " + " | ".join(str(d["config"].get(chave, "–")) for d in rodadas) + " |")
         for chave, rotulo in TODAS_AS_LINHAS:
-            linhas.append(f"| {rotulo} | " + " | ".join(_valor_resumo(d["resumo"], chave) for d in rodadas) + " |")
+            linhas.append(f"| {rotulo} | " + " | ".join(_valor_resumo(resumir(d["itens"]), chave) for d in rodadas) + " |")
         linhas.append("")
     if not algum:
         return None
@@ -667,7 +679,7 @@ def main():
               else "Nenhuma iteração completa em evals/resultados/.")
         return
     if args.iteracao is None:
-        parser.error("informe --iteracao 0, 1 ou 2")
+        parser.error("informe --iteracao (" + ", ".join(map(str, sorted(ITERACOES))) + ")")
 
     eval_set = json.loads(EVAL_SET.read_text(encoding="utf-8"))["itens"]
     itens = selecionar(eval_set, args.amostra, args.ids)
@@ -693,7 +705,8 @@ def main():
     anteriores = {}
     if args.continuar and caminho_json.exists():
         antigo = json.loads(caminho_json.read_text(encoding="utf-8"))
-        mesma_config = all(antigo.get("config", {}).get(c) == info[c] for c in ("versao_prompt", "modelo", "colecao"))
+        mesma_config = all(antigo.get("config", {}).get(c) == info.get(c)
+                           for c in ("versao_prompt", "modelo", "colecao", "busca"))
         if mesma_config:
             anteriores = {r["id"]: r for r in antigo["itens"] if not r.get("erro")}  # item com erro roda de novo
             print(f"Continuando {caminho_json.name}: {len(anteriores)} itens já respondidos.")

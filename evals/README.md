@@ -26,6 +26,7 @@ python evals/avaliar.py --iteracao 1 --amostra 3   # teste rápido com 3 pergunt
 python evals/avaliar.py --iteracao 0               # Sprint 3, sem RAG
 python evals/avaliar.py --iteracao 1               # RAG + prompt v1
 python evals/avaliar.py --iteracao 2               # RAG + prompt v2
+python evals/avaliar.py --iteracao 3               # RAG + prompt v2 + busca híbrida
 ```
 
 | Opção | O que faz |
@@ -39,6 +40,10 @@ python evals/avaliar.py --iteracao 2               # RAG + prompt v2
 | `--modelo gpt-oss:20b` | troca o modelo que responde, para o `relatorio_modelos.md`; o router e o juiz continuam os mesmos |
 
 Uma iteração completa faz perto de 150 chamadas ao Ollama Cloud: umas 50 do assistente (router e resposta) e umas 95 do juiz (5 por resposta avaliada). Se o Ollama Cloud recusar por limite de uso, o eval para, guarda o que já fez e mostra o comando para continuar depois.
+
+## Qualidade da busca
+
+`python evals/teste_busca_eval.py` mostra, sem chamar LLM, em quais perguntas do eval set cada forma de busca traz uma seção esperada entre os trechos do prompt: só semântica, só palavra-chave (BM25), híbrida, e cada uma com a pergunta completada pela conversa e pelos dados (`src/rag/consulta.py`). Também confere se as perguntas fora do domínio continuam sem trecho nenhum. O resultado fica em `resultados/teste_busca_eval.md`.
 
 ## O que é medido
 
@@ -54,6 +59,7 @@ Em todos os itens, sem LLM:
 Com o RAGAS, nos itens que devem ser respondidos:
 
 - **Faithfulness:** o juiz quebra a resposta em afirmações e confere cada uma no contexto que o modelo recebeu (trechos da base e dados do posto). 1 = tudo sustentado pelo contexto.
+  O resumo traz duas médias: a de todos os itens que devem ser respondidos e a só das respostas dadas. A recusa ("não encontrei...") não afirma nada sobre o posto, mas o juiz costuma contar a própria recusa como afirmação sem apoio; a segunda média separa esse efeito. A recusa indevida continua punida no comportamento e na answer relevancy.
 - **Answer relevancy:** o juiz escreve 3 perguntas que a resposta responderia, e o embedding compara cada uma com a pergunta original. Resposta evasiva ("não encontrei") recebe 0.
 
 ## Detalhes do RAGAS neste projeto
@@ -77,4 +83,5 @@ Com o RAGAS, nos itens que devem ser respondidos:
 | `resultados/iteracao_<n>.json` | tudo, item a item: resposta, trechos, verificações e notas |
 | `resultados/iteracao_<n>.md` | resumo, tabela item a item e as respostas |
 | `resultados/comparativo.md` | as iterações completas lado a lado |
-| `teste_busca.py`, `teste_seguranca.py`, `perguntar.py` | testes dos blocos anteriores (busca, segurança, pergunta avulsa) |
+| `teste_busca_eval.py` | qualidade da busca nas perguntas do eval set, por forma de busca |
+| `teste_busca.py`, `teste_seguranca.py`, `perguntar.py` | testes dos blocos anteriores (busca, segurança com `--versao` e `--busca`, pergunta avulsa) |

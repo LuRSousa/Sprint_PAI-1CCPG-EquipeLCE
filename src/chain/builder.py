@@ -18,6 +18,8 @@ from recursos import (
 
 # Sprint 4: RAG (recuperação na base de conhecimento + prompt versionado)
 from rag.retriever import recuperar, formatar_para_prompt, como_fontes
+from rag.consulta import montar_consulta
+from rag.config import BUSCA
 from rag.prompt_rag import montar_prompt, VERSAO_PROMPT
 
 # Sprint 4: guardrails da Sprint 3, agora ligados na entrada e na saída
@@ -199,10 +201,13 @@ def processar_pergunta(pergunta, session_id):
         print(f"Guardrail de entrada: {bloqueio.categoria}")
         return _resultado(bloqueio.mensagem_usuario, "bloqueada", guardrail=bloqueio.categoria)
 
-    # 2. Recuperação: trechos da base parecidos com a pergunta (embeddings no Ollama local)
+    # 2. Recuperação: trechos da base parecidos com a pergunta (embeddings no Ollama local).
+    #    Na busca híbrida, o texto da busca é a pergunta completada com a conversa e os dados do
+    #    posto (rag/consulta.py); o modelo continua recebendo a pergunta original.
     inicio_busca = time.perf_counter()
+    consulta = montar_consulta(pergunta, history, dados_mock) if BUSCA == "hibrida" else pergunta
     try:
-        trechos = recuperar(pergunta)
+        trechos = recuperar(consulta)
     except ConnectionError:
         return _resultado(
             "Não consegui consultar a base de conhecimento: o Ollama do computador "
@@ -237,7 +242,7 @@ def processar_pergunta(pergunta, session_id):
     if classificacao == "nao_estruturada":
 
         documentos = formatar_para_prompt(trechos)
-        print(f"Trechos recuperados: {len(trechos)} (prompt RAG {VERSAO_PROMPT})")
+        print(f"Trechos recuperados: {len(trechos)} (prompt RAG {VERSAO_PROMPT}, busca {BUSCA})")
 
         tokens_entrada = contar_tokens_entrada(
             history,
@@ -273,6 +278,7 @@ def processar_pergunta(pergunta, session_id):
             fontes=como_fontes(trechos),
             guardrail=guardrail,
             versao_prompt=VERSAO_PROMPT,
+            consulta_busca=consulta,
             tokens_entrada=tokens_entrada,
             tokens_saida=tokens_saida,
             tokens_router=tokens_router,
