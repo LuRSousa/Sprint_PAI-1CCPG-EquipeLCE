@@ -15,9 +15,11 @@ Formas comparadas:
 Também confere as perguntas fora do domínio: quantos trechos passariam para o prompt
 (o ideal é nenhum, para o guardrail de escopo continuar barrando).
 
-    python evals/teste_busca_eval.py
-Resultado em evals/resultados/teste_busca_eval.md
+    python evals/teste_busca_eval.py                       # k do src/rag/config.py
+    python evals/teste_busca_eval.py --varrer-k 2,3,4,6,8  # quantos trechos levar para o prompt
+Resultados em evals/resultados/teste_busca_eval.md e teste_busca_k.md
 """
+import argparse
 import json
 import sys
 from datetime import datetime
@@ -35,7 +37,9 @@ from recursos import _carregar_dados_mock  # noqa: E402
 
 EVAL_SET = RAIZ / "evals" / "eval_set_sprint4.json"
 DESTINO = RAIZ / "evals" / "resultados" / "teste_busca_eval.md"
+DESTINO_K = RAIZ / "evals" / "resultados" / "teste_busca_k.md"
 FORMAS = ["vetorial", "bm25", "híbrida", "vetorial + consulta", "híbrida + consulta", "intercalada + consulta"]
+FORMA_DO_APP = "intercalada + consulta"
 
 
 def _bate(trecho_arquivo: str, trecho_secao: str, esperadas) -> bool:
@@ -50,18 +54,86 @@ def _bm25(texto: str, k: int):
     pontos = indice.pontuar(texto)
     ordem = [i for i in sorted(range(len(docs)), key=lambda i: pontos[i], reverse=True)
              if pontos[i] > 0 and indice.termos_em_comum(texto, i) >= 2]
-    return [(docs[i].metadata["arquivo"], docs[i].metadata["secao"]) for i in ordem[:k]]
+    return [(docs[i].metadata["arquivo"], docs[i].metadata["secao"], len(docs[i].page_content)) for i in ordem[:k]]
 
 
-def buscar_por_forma(forma: str, pergunta: str, historico, dados) -> list[tuple[str, str]]:
+def buscar_por_forma(forma: str, pergunta: str, historico, dados, k: int = K) -> list[tuple[str, str, int]]:
+    """Trechos que iriam para o prompt: (arquivo, seção, tamanho do texto em caracteres)."""
     texto = montar_consulta(pergunta, historico, dados) if forma.endswith("consulta") else pergunta
     if forma == "bm25":
-        return _bm25(texto, K)
+        return _bm25(texto, k)
     busca = forma.split(" ")[0].replace("í", "i")  # "vetorial", "hibrida" ou "intercalada"
-    return [(t.arquivo, t.secao) for t in recuperar(texto, busca=busca)]
+    return [(t.arquivo, t.secao, len(t.texto)) for t in recuperar(texto, k=k, busca=busca)]
+
+
+def _posicao(trechos, esperadas):
+    return next((i for i, (arq, sec, _) in enumerate(trechos, 1) if _bate(arq, sec, esperadas)), None)
+
+
+def _br(numero: float, casas: int = 0) -> str:
+    texto = f"{numero:,.{casas}f}"
+    return texto.replace(",", "#").replace(".", ",").replace("#", ".")
+
+
+def varrer_k(valores: list[int]):
+    """Para cada k: acertos de cada forma de busca e, na forma do app, o tamanho do contexto."""
+    itens = json.loads(EVAL_SET.read_text(encoding="utf-8"))["itens"]
+    dados = _carregar_dados_mock()
+    com_fonte = [it for it in itens if it["fontes_esperadas"]]
+    fora = [it for it in itens if it["categoria"] == "fora do escopo"]
+    total = len(com_fonte)
+    linhas = [
+        "# Busca: quantos trechos levar para o prompt (k)",
+        "",
+        f"- Data: {datetime.now():%d/%m/%Y %H:%M} · coleção `{COLECAO}` · limiar {LIMIAR} · k em uso: {K}",
+        f"- Acertos: perguntas (de {total}) em que uma seção esperada está entre os trechos que vão para o prompt.",
+        "",
+        "| k | " + " | ".join(FORMAS) + " |",
+        "|---|" + "---|" * len(FORMAS),
+    ]
+    app = []
+    for k in valores:
+        acertos = {f: 0 for f in FORMAS}
+        trechos_app, caracteres_app, faltam = [], [], []
+        for item in com_fonte:
+            pergunta = item["turnos"][-1]
+            historico = [HumanMessage(t) for t in item["turnos"][:-1]]
+            for forma in FORMAS:
+                trechos = buscar_por_forma(forma, pergunta, historico, dados, k)
+                achou = _posicao(trechos, item["fontes_esperadas"]) is not None
+                acertos[forma] += achou
+                if forma == FORMA_DO_APP:
+                    trechos_app.append(len(trechos))
+                    caracteres_app.append(sum(t[2] for t in trechos))
+                    if not achou:
+                        faltam.append(item["id"])
+        fora_app = [len(buscar_por_forma(FORMA_DO_APP, it["turnos"][-1], [], dados, k)) for it in fora]
+        linhas.append(f"| {k} | " + " | ".join(f"{acertos[f]}/{total}" for f in FORMAS) + " |")
+        app.append((k, acertos[FORMA_DO_APP], sum(trechos_app) / total, sum(caracteres_app) / total, fora_app, faltam))
+        print(f"k = {k}: {FORMA_DO_APP} {acertos[FORMA_DO_APP]}/{total}")
+
+    linhas += ["", f"## Na busca do app ({FORMA_DO_APP})", "",
+               "| k | Acertos | Trechos por pergunta (média) | Caracteres de trecho por pergunta (média) "
+               "| Trechos nas perguntas fora do domínio | Perguntas sem seção esperada |",
+               "|---|---|---|---|---|---|"]
+    for k, acertos, trechos, caracteres, fora_app, faltam in app:
+        linhas.append(f"| {k} | {acertos}/{total} | {_br(trechos, 1)} | {_br(caracteres)} | "
+                      f"{' e '.join(map(str, fora_app)) or '–'} | {', '.join(faltam) or '–'} |")
+    linhas += ["", "Cada caractere a mais de trecho também é token de entrada a mais em toda pergunta "
+               "(em português, algo perto de 4 caracteres por token)."]
+    DESTINO_K.parent.mkdir(parents=True, exist_ok=True)
+    DESTINO_K.write_text("\n".join(linhas) + "\n", encoding="utf-8")
+    print(f"\nResultado em {DESTINO_K.relative_to(RAIZ)}")
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Qualidade da busca nas perguntas do eval set (sem LLM)")
+    parser.add_argument("--varrer-k", help="valores de k separados por vírgula (ex.: 2,3,4,6,8)")
+    args = parser.parse_args()
+    if args.varrer_k:
+        varrer_k([int(v) for v in args.varrer_k.split(",") if v.strip()])
+        return
+
     itens = json.loads(EVAL_SET.read_text(encoding="utf-8"))["itens"]
     dados = _carregar_dados_mock()
     acertos = {f: 0 for f in FORMAS}
@@ -81,7 +153,7 @@ def main():
         celulas = []
         for forma in FORMAS:
             trechos = buscar_por_forma(forma, pergunta, historico, dados)
-            posicao = next((i for i, (arq, sec) in enumerate(trechos, 1) if _bate(arq, sec, item["fontes_esperadas"])), None)
+            posicao = _posicao(trechos, item["fontes_esperadas"])
             acertos[forma] += posicao is not None
             celulas.append(f"{posicao}º" if posicao else "–")
         esperadas = ", ".join(f"{a} §{s}" for a, s in item["fontes_esperadas"])
@@ -104,4 +176,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except ConnectionError:
+        # os embeddings da busca vêm do Ollama do computador; sem ele, nenhuma forma de busca roda
+        raise SystemExit("O Ollama do computador não respondeu (é ele que gera os embeddings da busca). "
+                         "Abra o app do Ollama, confira com: ollama list")

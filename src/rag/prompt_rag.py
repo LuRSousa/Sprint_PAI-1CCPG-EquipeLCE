@@ -1,7 +1,7 @@
 """Prompt RAG versionado da chain conversacional (Sprint 4).
 
 Cada versão fica guardada em VERSOES, para o eval comparar uma com a outra.
-A versão em uso vem da variável de ambiente RAG_PROMPT_VERSAO (padrão: v1).
+A versão em uso vem da variável de ambiente RAG_PROMPT_VERSAO (padrão: v2, em src/rag/config.py).
 
 v1 (derivada do system prompt v2 da Sprint 3):
 - sai "NUNCA informe a origem dos dados", que contradiz a citação obrigatória;

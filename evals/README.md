@@ -41,12 +41,18 @@ Cada iteração fixa a sua versão do prompt e a sua busca antes de carregar o a
 | `--comparativo` | só refaz o `comparativo.md` (e o `comparativo_modelos.md`) com as rodadas já feitas |
 | `--reverificar` | refaz só as verificações automáticas com as respostas já salvas, sem chamar modelo (para quando o verificador melhora) |
 | `--modelo gpt-oss:20b` | troca o modelo que responde, para o `relatorio_modelos.md`; o router e o juiz continuam os mesmos |
+| `--k 6` | troca o número de trechos que vão para o prompt (o padrão é 4) |
+| `--max-tokens 2048` | troca o limite de tokens de saída do assistente (o padrão é 1024); o raciocínio do gpt-oss conta nesse limite |
+
+Com `--modelo`, `--k` ou `--max-tokens`, o resultado ganha o nome do modelo, o k e/ou o limite (`iteracao_4_gpt-oss-20b.json`, `iteracao_4_k6.json`, `iteracao_4_gpt-oss-20b_mt2048.json`) e entra no `comparativo_modelos.md`, ao lado da rodada padrão da mesma iteração, com temperature, top_p, max_tokens e k de cada coluna.
 
 Uma iteração completa faz perto de 150 chamadas ao Ollama Cloud: umas 50 do assistente (router e resposta) e umas 95 do juiz (5 por resposta avaliada). Se o Ollama Cloud recusar por limite de uso, o eval para, guarda o que já fez e mostra o comando para continuar depois.
 
 ## Qualidade da busca
 
 `python evals/teste_busca_eval.py` mostra, sem chamar LLM, em quais perguntas do eval set cada forma de busca traz uma seção esperada entre os trechos do prompt: só semântica, só palavra-chave (BM25), híbrida pela RRF, híbrida intercalada (vagas divididas entre as duas buscas), e com a pergunta completada pela conversa e pelos dados (`src/rag/consulta.py`). Também confere se as perguntas fora do domínio continuam sem trecho nenhum. O resultado fica em `resultados/teste_busca_eval.md`.
+
+`python evals/teste_busca_eval.py --varrer-k 2,3,4,6,8` repete a conta para cada k e mostra, na busca do app, quantos trechos e caracteres vão para o prompt em média: é o custo de cada trecho a mais. O resultado fica em `resultados/teste_busca_k.md`.
 
 ## O que é medido
 
@@ -86,5 +92,6 @@ Com o RAGAS, nos itens que devem ser respondidos:
 | `resultados/iteracao_<n>.json` | tudo, item a item: resposta, trechos, verificações e notas |
 | `resultados/iteracao_<n>.md` | resumo, tabela item a item e as respostas |
 | `resultados/comparativo.md` | as iterações completas lado a lado |
+| `resultados/comparativo_modelos.md` | a mesma iteração com outro modelo ou outro k |
 | `teste_busca_eval.py` | qualidade da busca nas perguntas do eval set, por forma de busca |
 | `teste_busca.py`, `teste_seguranca.py`, `perguntar.py` | testes dos blocos anteriores (busca, segurança com `--versao` e `--busca`, pergunta avulsa) |

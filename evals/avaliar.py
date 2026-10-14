@@ -8,7 +8,9 @@ Na raiz do projeto, com o venv ativo e o Ollama aberto:
     python evals/avaliar.py --iteracao 0 --sem-ragas   # só as verificações automáticas
     python evals/avaliar.py --comparativo              # só refaz o comparativo.md
     python evals/avaliar.py --iteracao 1 --reverificar # refaz as verificações com as respostas salvas
-    python evals/avaliar.py --iteracao 1 --modelo gpt-oss:20b   # outro modelo (relatorio_modelos.md)
+    python evals/avaliar.py --iteracao 4 --modelo gpt-oss:20b   # outro modelo (relatorio_modelos.md)
+    python evals/avaliar.py --iteracao 4 --k 6                  # outro número de trechos no prompt
+    python evals/avaliar.py --iteracao 4 --modelo gpt-oss:20b --max-tokens 2048   # outro limite de saída
 
 Iterações:
     0  Sprint 3, sem RAG (evals/sprint3_baseline.py)
@@ -30,8 +32,10 @@ Notas de cada item:
 
 Saídas em evals/resultados/: iteracao_<n>.json (tudo, item a item), iteracao_<n>.md (resumo
 e respostas) e comparativo.md (as iterações completas lado a lado). Com --amostra ou --ids,
-os arquivos ganham o sufixo _amostra e ficam fora do comparativo. Com --modelo, ganham o nome do
-modelo (iteracao_1_gpt-oss-20b.json) e entram no comparativo_modelos.md; o juiz do RAGAS não muda.
+os arquivos ganham o sufixo _amostra e ficam fora do comparativo. Com --modelo, --k ou --max-tokens,
+ganham o nome do modelo, o k e/ou o limite (iteracao_4_gpt-oss-20b.json, iteracao_4_k6.json,
+iteracao_4_gpt-oss-20b_mt2048.json) e entram no comparativo_modelos.md; o router e o juiz do RAGAS
+não mudam.
 """
 import argparse
 import asyncio
@@ -218,6 +222,9 @@ def _erro_fatal(erro, onde: str):
             return "O Ollama Cloud recusou por limite de uso (429)."
         if isinstance(erro, ConnectionError) or "failed to connect" in texto or "connection refused" in texto:
             return SEM_CONEXAO[onde]
+        if status == 404 or ("model" in texto and "not found" in texto):
+            return (f"O Ollama não encontrou o modelo pedido (404): {str(erro)[:160]}. Confira o nome "
+                    "(os modelos da nuvem estão em ollama.com/search?c=cloud).")
         erro = erro.__cause__ or erro.__context__
     return None
 
@@ -581,11 +588,17 @@ def _slug(modelo: str) -> str:
     return re.sub(r"[^a-z0-9.]+", "-", modelo.lower()).strip("-")
 
 
+def _param(valor) -> str:
+    if valor is None:
+        return "–"
+    return f"{valor:g}".replace(".", ",") if isinstance(valor, float) else str(valor)
+
+
 def escrever_comparativo_modelos() -> Path | None:
-    """Mesma iteração com modelos diferentes (rodadas com --modelo), lado a lado."""
-    linhas = ["# Comparativo de modelos", "",
-              "Mesma iteração e mesmo eval set, trocando só o modelo que responde (`--modelo`). "
-              "O router e o juiz do RAGAS são os mesmos em todas as colunas.", ""]
+    """Mesma iteração com outro modelo (--modelo) ou outro k (--k), lado a lado."""
+    linhas = ["# Comparativo de modelos e parâmetros", "",
+              "Mesma iteração e mesmo eval set, trocando o modelo que responde (`--modelo`) ou o número de "
+              "trechos no prompt (`--k`). O router e o juiz do RAGAS são os mesmos em todas as colunas.", ""]
     algum = False
     for n in sorted(ITERACOES):
         rodadas = []
@@ -598,12 +611,19 @@ def escrever_comparativo_modelos() -> Path | None:
         if len(rodadas) < 2:
             continue
         algum = True
+        varia_k = len({d["config"].get("k") for d in rodadas}) > 1
+        varia_mt = len({d["config"].get("num_predict") for d in rodadas}) > 1
+
+        def rotulo(d):
+            return (f"`{d['config'].get('modelo')}`" + (f" · k = {d['config'].get('k')}" if varia_k else "")
+                    + (f" · max_tokens = {d['config'].get('num_predict')}" if varia_mt else ""))
+
         linhas += [f"## Iteração {n}: {ITERACOES[n]['nome']}", "",
-                   "| | " + " | ".join(f"`{d['config'].get('modelo')}`" for d in rodadas) + " |",
+                   "| | " + " | ".join(rotulo(d) for d in rodadas) + " |",
                    "|---|" + "---|" * len(rodadas)]
         for chave, rotulo in (("temperature", "temperature"), ("top_p", "top_p"),
                               ("num_predict", "max_tokens (num_predict)"), ("k", "k (trechos)")):
-            linhas.append(f"| {rotulo} | " + " | ".join(str(d["config"].get(chave, "–")) for d in rodadas) + " |")
+            linhas.append(f"| {rotulo} | " + " | ".join(_param(d["config"].get(chave)) for d in rodadas) + " |")
         for chave, rotulo in TODAS_AS_LINHAS:
             linhas.append(f"| {rotulo} | " + " | ".join(_valor_resumo(resumir(d["itens"]), chave) for d in rodadas) + " |")
         linhas.append("")
@@ -672,6 +692,9 @@ def main():
     parser.add_argument("--reverificar", action="store_true",
                         help="refaz só as verificações automáticas com as respostas salvas (não chama modelo)")
     parser.add_argument("--modelo", help="outro modelo para o assistente (ex.: gpt-oss:20b); o juiz não muda")
+    parser.add_argument("--k", type=int, help="outro número de trechos no prompt (o padrão está em src/rag/config.py)")
+    parser.add_argument("--max-tokens", type=int, dest="max_tokens",
+                        help="outro limite de tokens de saída do assistente (o padrão é 1024, em src/chain/builder.py)")
     args = parser.parse_args()
 
     PASTA_RESULTADOS.mkdir(parents=True, exist_ok=True)
@@ -686,7 +709,8 @@ def main():
     eval_set = json.loads(EVAL_SET.read_text(encoding="utf-8"))["itens"]
     itens = selecionar(eval_set, args.amostra, args.ids)
     amostra = bool(args.amostra or args.ids)
-    sufixo = (f"_{_slug(args.modelo)}" if args.modelo else "") + ("_amostra" if amostra else "")
+    sufixo = ((f"_{_slug(args.modelo)}" if args.modelo else "") + (f"_k{args.k}" if args.k else "")
+              + (f"_mt{args.max_tokens}" if args.max_tokens else "") + ("_amostra" if amostra else ""))
     caminho_json = PASTA_RESULTADOS / f"iteracao_{args.iteracao}{sufixo}.json"
     caminho_md = PASTA_RESULTADOS / f"iteracao_{args.iteracao}{sufixo}.md"
     cfg = ITERACOES[args.iteracao]
@@ -696,6 +720,14 @@ def main():
         return
     if args.modelo:
         os.environ["OLLAMA_MODEL"] = args.modelo  # o builder lê o modelo no import
+    if args.k:
+        if ITERACOES[args.iteracao]["modo"] != "rag":
+            parser.error("--k só vale para as iterações com RAG (1 em diante)")
+        os.environ["RAG_K"] = str(args.k)          # o rag.config lê o k no import
+    if args.max_tokens:
+        if ITERACOES[args.iteracao]["modo"] != "rag":
+            parser.error("--max-tokens só vale para as iterações com RAG (1 em diante)")
+        os.environ["OLLAMA_NUM_PREDICT"] = str(args.max_tokens)   # o builder lê o limite no import
 
     try:
         processar, contextos, info = carregar_assistente(args.iteracao)
@@ -708,7 +740,7 @@ def main():
     if args.continuar and caminho_json.exists():
         antigo = json.loads(caminho_json.read_text(encoding="utf-8"))
         mesma_config = all(antigo.get("config", {}).get(c) == info.get(c)
-                           for c in ("versao_prompt", "modelo", "colecao", "busca"))
+                           for c in ("versao_prompt", "modelo", "colecao", "busca", "k", "num_predict"))
         if mesma_config:
             anteriores = {r["id"]: r for r in antigo["itens"] if not r.get("erro")}  # item com erro roda de novo
             print(f"Continuando {caminho_json.name}: {len(anteriores)} itens já respondidos.")
@@ -795,7 +827,7 @@ def main():
     escrever_markdown(dados, caminho_md)
     atualizados = [caminho_md]
     if not amostra:
-        if not args.modelo:
+        if not args.modelo and not args.k and not args.max_tokens:
             atualizados.append(escrever_comparativo())
         atualizados.append(escrever_comparativo_modelos())
 
@@ -807,6 +839,8 @@ def main():
         print(f"\nO eval parou: {interrompido}\nO que já foi feito está salvo. Para seguir de onde parou:"
               f"\n  python evals/avaliar.py --iteracao {args.iteracao}"
               + (f" --modelo {args.modelo}" if args.modelo else "")
+              + (f" --k {args.k}" if args.k else "")
+              + (f" --max-tokens {args.max_tokens}" if args.max_tokens else "")
               + (f" --amostra {args.amostra}" if args.amostra else "")
               + (f" --ids {args.ids}" if args.ids else "")
               + (" --sem-ragas" if args.sem_ragas else "") + " --continuar")

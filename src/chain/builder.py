@@ -56,7 +56,9 @@ llm = ChatOllama(
     base_url=base_url,
     temperature=0,      # Sprint 4: resposta presa ao contexto (antes 0.2)
     top_p=0.9,
-    num_predict=1024,   # antes 512: a resposta agora traz as citações
+    # antes 512: a resposta agora traz as citações. O gpt-oss raciocina antes de responder e esse
+    # raciocínio conta no limite; o eval troca o valor com --max-tokens (OLLAMA_NUM_PREDICT)
+    num_predict=int(os.getenv("OLLAMA_NUM_PREDICT", "1024")),
     client_kwargs={
         "headers": {
             "Authorization": f"Bearer {api_key}"

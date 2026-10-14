@@ -424,7 +424,10 @@ ChargeGrid-Assistant/
 # 📂 Arquivos e Documentação
 
 * [Fluxograma](docs/fluxograma.png)
-* [Relatório de evolução do projeto](docs/relatorio_evolucao.pdf)
+* [Relatório do RAG (Sprint 4)](docs/relatorio_rag.md)
+* [Relatório de modelos e parâmetros (Sprint 4)](docs/relatorio_modelos.md)
+* [Relatório de evolução da Sprint 3](docs/sprint3/relatorio_evolucao.pdf)
+* [Relatório de modelos da Sprint 3](docs/sprint3/relatorio_modelos.md)
 * [System Prompt](prompts/system_prompt.md)
 * [Dados mock](data/mock_data.json)
 * [Aplicação Streamlit](src/app.py)
