@@ -4,7 +4,7 @@ Assistente com RAG: responde sobre o posto usando os dados operacionais (`data/m
 
 ## O que precisa estar instalado
 
-- **Python 3.10 ou mais novo** (testado no 3.14, Windows).
+- **Python 3.11 ou mais novo** (testado no 3.14 no Windows e no 3.13 no Linux).
 - **Ollama** instalado e aberto no computador: é ele que gera os embeddings, com o `nomic-embed-text`.
 - **Chave do Ollama Cloud**: o modelo de conversa (`gpt-oss:120b`) roda na nuvem.
 
@@ -83,6 +83,26 @@ pergunta
 | `data/knowledge_base/` | os 7 PDFs simulados da base, com um README explicando como foram montados |
 | `evals/` | testes e resultados |
 
+## Sem chave do Ollama Cloud: modelo no computador
+
+O app foi avaliado com o `gpt-oss:120b` no Ollama Cloud. Para testar sem chave, dá para rodar o `gpt-oss:20b` no próprio computador (uns 14 GB de download e pelo menos 16 GB de memória). As respostas ficam mais lentas e um pouco piores, como mostra o `docs/relatorio_modelos.md`.
+
+```powershell
+ollama pull gpt-oss:20b
+```
+
+No `.env`:
+
+```
+OLLAMA_MODEL=gpt-oss:20b
+OLLAMA_MODEL_ROUTER=gpt-oss:20b
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_NUM_PREDICT=2048
+OLLAMA_API_KEY=nao_precisa
+```
+
+No eval, use `--sem-ragas` (o juiz do RAGAS é o `gpt-oss:120b`, na nuvem) ou troque o juiz com `RAGAS_JUIZ=gpt-oss:20b` no `.env`.
+
 ## Problemas comuns
 
 | Mensagem | O que fazer |
@@ -90,4 +110,5 @@ pergunta
 | `Failed to connect to Ollama` ou "o Ollama do computador parece estar fechado" | abrir o app do Ollama |
 | `unauthorized (status code: 401)` | conferir a `OLLAMA_API_KEY` no `.env` e reiniciar o app |
 | "A coleção 'chargegrid_kb' ainda não existe" | rodar a ingestão (passo 3) |
+| `model "..." not found` | baixar o modelo que aparece no erro: `ollama pull <modelo>` |
 | respostas estranhas depois de rodar a ingestão com o app aberto | parar o Streamlit (Ctrl+C) e abrir de novo |

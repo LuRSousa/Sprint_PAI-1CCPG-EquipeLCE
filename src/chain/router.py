@@ -1,5 +1,6 @@
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.exceptions import OutputParserException
 
 import sys
 from pathlib import Path
@@ -44,8 +45,13 @@ def classificar_prompt(llm, pergunta) -> str:
     # Mede a saída produzida pela LLM
     tokens_saida = len(enc.encode(resposta_llm.content))
 
-    # Converte a resposta para RotaConsulta
-    resposta = parser.invoke(resposta_llm)
+    # Converte a resposta para RotaConsulta. Se o modelo não devolver o JSON esperado, a pergunta
+    # segue pela conversa (RAG), que é o caminho da maioria das perguntas, em vez de virar erro na tela.
+    try:
+        resposta = parser.invoke(resposta_llm)
+    except OutputParserException:
+        print("Router: resposta fora do formato esperado; seguindo pela conversa (nao_estruturada)")
+        return ("nao_estruturada", len(enc.encode(pergunta)) + tokens_saida)
 
     # Mede a entrada
     prompt_formatado = prompt.invoke({

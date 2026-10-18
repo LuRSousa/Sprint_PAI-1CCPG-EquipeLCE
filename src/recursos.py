@@ -8,28 +8,25 @@ from datetime import datetime
 enc = tiktoken.get_encoding("cl100k_base")
 
 def _carregar_system_prompt() -> str:
-    """Carrega o system prompt do arquivo prompts/system_prompt.md."""
+    """Carrega o system prompt da Sprint 3 (prompts/system_prompts/system_prompt_v2.md)."""
     
     base = Path(__file__).resolve().parent.parent
     with open(base / "prompts" / "system_prompts" / "system_prompt_v2.md", "r", encoding="utf-8") as f:
         return f.read()
 
 def _carregar_router_system_prompt() -> str:
-    """Carrega o router system prompt do arquivo prompts/router_system_prompt.md."""
+    """Carrega o system prompt do router (prompts/router_system_prompts/router_system_prompt_v2.md)."""
     
     base = Path(__file__).resolve().parent.parent
     with open(base / "prompts" / "router_system_prompts" / "router_system_prompt_v2.md", "r", encoding="utf-8") as f:
         return f.read()
-    
-    return 
-    
+
+
 def _carregar_dados_mock() -> dict:
     """Carrega os dados mock operacionais do arquivo data/mock_data.json."""
     base = Path(__file__).resolve().parent.parent
     with open(base / "data" / "mock_data.json", "r", encoding="utf-8") as f:
         return json.load(f)
-        
-    return json.dumps(dados, ensure_ascii=False, indent=2)
 
 def _num(valor) -> str:
     """Número no formato brasileiro, sem casas decimais sobrando: 38.7 -> 38,7 ; 40.0 -> 40."""

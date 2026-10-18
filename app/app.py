@@ -124,7 +124,8 @@ def _renderizar_sidebar():
 
         modelo_atual = os.environ.get("OLLAMA_MODEL", "llama3.1")
         st.caption(f"🤖 Modelo: `{modelo_atual}`")
-        st.caption("🌐 Provedor: `Ollama Cloud`")
+        nuvem = "ollama.com" in os.environ.get("OLLAMA_BASE_URL", "https://ollama.com")
+        st.caption(f"🌐 Provedor: `{'Ollama Cloud' if nuvem else 'Ollama no computador'}`")
         st.markdown("---")
 
         # Sprint 4: estado da base de conhecimento (RAG)

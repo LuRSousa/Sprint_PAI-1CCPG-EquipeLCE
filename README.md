@@ -347,6 +347,10 @@ Orientações que exigiriam diagnóstico físico ou intervenção elétrica são
 | tiktoken         | Medição de tokens                      |
 | python-dotenv    | Gerenciamento de variáveis de ambiente |
 | JSON             | Dados operacionais simulados           |
+| ChromaDB         | Banco vetorial da base de conhecimento (Sprint 4) |
+| nomic-embed-text | Embeddings da base, no Ollama do computador (Sprint 4) |
+| PyMuPDF          | Leitura dos PDFs com o `PyMuPDFLoader` (Sprint 4) |
+| RAGAS            | Avaliação: faithfulness e answer relevancy (Sprint 4) |
 
 ---
 
@@ -403,7 +407,7 @@ Exemplo:
 ```env
 OLLAMA_API_KEY=sua_chave_aqui
 OLLAMA_MODEL=gpt-oss:120b
-OLLAMA_MODEL_ROUTER=seu_modelo_do_router
+OLLAMA_MODEL_ROUTER=gpt-oss:120b
 ```
 
 O arquivo `.env` **não deve ser versionado**.
@@ -576,6 +580,8 @@ OLLAMA_API_KEY=sua_chave_aqui
 Configure também os modelos utilizados pela aplicação conforme as variáveis disponíveis no `.env.example`.
 
 > O arquivo `.env` não deve ser commitado.
+
+> Sem chave do Ollama Cloud, dá para usar um modelo baixado no computador: veja "Sem chave do Ollama Cloud" em [app/README.md](app/README.md).
 
 ## 5. Monte a base de conhecimento
 
