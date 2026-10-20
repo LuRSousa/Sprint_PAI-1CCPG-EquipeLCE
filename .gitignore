@@ -219,3 +219,6 @@ __marimo__/
 
 # Node.js
 node_modules/
+
+# Sprint 4 - banco vetorial (recriado pela ingestão)
+chroma_db/

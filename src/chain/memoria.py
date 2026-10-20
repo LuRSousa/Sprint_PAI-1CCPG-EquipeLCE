@@ -1,6 +1,15 @@
 from langchain_classic.memory import ConversationTokenBufferMemory
 from langchain_core.chat_history import BaseChatMessageHistory
 
+import tiktoken
+
+_enc = tiktoken.get_encoding("cl100k_base")
+
+
+def _tokens(mensagem):
+    conteudo = mensagem.content if isinstance(mensagem.content, str) else str(mensagem.content)
+    return len(_enc.encode(conteudo))
+
 
 class HistoricoTokenBuffer(BaseChatMessageHistory):
     """
@@ -21,6 +30,13 @@ class HistoricoTokenBuffer(BaseChatMessageHistory):
 
     def add_messages(self, messages):
         self.memoria.chat_memory.add_messages(messages)
+        # Aplica o limite de tokens da memória. O RunnableWithMessageHistory grava as mensagens direto
+        # no histórico, sem passar pelo save_context (onde o ConversationTokenBufferMemory cortaria as
+        # mais antigas); sem isto, o histórico crescia sem limite. Corta de dois em dois (pergunta e
+        # resposta) e mantém sempre o último turno.
+        historico = self.memoria.chat_memory.messages
+        while len(historico) > 2 and sum(_tokens(m) for m in historico) > self.memoria.max_token_limit:
+            del historico[:2]
 
     def clear(self):
         self.memoria.clear()
