@@ -3,8 +3,11 @@
 Só a busca usa esse texto; o modelo continua recebendo a pergunta como o operador escreveu.
 Três casos do eval mostraram que a pergunta sozinha não basta para achar o trecho certo:
 
-1. Pergunta de continuação: "E no vale?" não diz que o assunto é preço do kWh. Quando a pergunta
-   começa com "E" ou é muito curta e já existe conversa, a pergunta anterior do operador entra junto.
+1. Pergunta de continuação: "E no vale?" não diz que o assunto é preço do kWh. Quando já existe
+   conversa e a pergunta começa com "E", tem até 3 palavras ou se refere à conversa ("dele", "isso"),
+   a pergunta anterior do operador entra junto. Pergunta curta mas completa ("Quanto custa recarregar
+   às 18h?") fica sozinha: até 20/10, toda pergunta de até 6 palavras puxava a anterior, e depois de
+   "O carregador 2 está offline" a busca trazia os trechos de falha em vez da tabela tarifária.
 2. Carregador com alerta: "o carregador 3 está com um alerta" não diz qual alerta. O tipo do alerta
    ativo (nos dados) entra na busca, e aí o procedimento certo do manual aparece.
 3. Sessão citada pelo código: "quanto foi cobrado na SESS-004" não fala de tarifa. O horário de
@@ -16,7 +19,13 @@ seria pedir ao LLM que reescrevesse a pergunta, ao custo de mais uma chamada por
 import re
 from datetime import datetime
 
-MAX_PALAVRAS_CONTINUACAO = 6
+MAX_PALAVRAS_CONTINUACAO = 3
+# Palavras que só fazem sentido com a conversa ("qual o limite dele?", "isso é normal?")
+REFERENCIAS_A_CONVERSA = {
+    "ele", "ela", "eles", "elas", "dele", "dela", "deles", "delas", "nele", "nela",
+    "isso", "disso", "nisso", "esse", "essa", "esses", "essas", "desse", "dessa", "nesse", "nessa",
+    "aquele", "aquela", "aquilo", "daquele", "daquela", "mesmo", "mesma",
+}
 
 
 def _pergunta_anterior(historico) -> str | None:
@@ -28,7 +37,9 @@ def _pergunta_anterior(historico) -> str | None:
 
 def _parece_continuacao(pergunta: str) -> bool:
     texto = pergunta.strip().lower()
-    return texto.startswith(("e ", "e,")) or len(texto.split()) <= MAX_PALAVRAS_CONTINUACAO
+    palavras = re.findall(r"\w+", texto)
+    return (texto.startswith(("e ", "e,")) or len(palavras) <= MAX_PALAVRAS_CONTINUACAO
+            or any(p in REFERENCIAS_A_CONVERSA for p in palavras))
 
 
 def montar_consulta(pergunta: str, historico=None, dados: dict | None = None) -> str:

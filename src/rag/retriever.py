@@ -16,7 +16,7 @@ from langchain_core.documents import Document
 
 from rag.bm25 import IndiceBM25
 from rag.config import BUSCA, COLECAO, K, LIMIAR
-from rag.vector_store import _cliente, buscar
+from rag.vector_store import _cliente, _existe, buscar
 
 # Busca híbrida
 CANDIDATOS = 10  # quantos trechos de cada busca entram na fusão
@@ -69,7 +69,11 @@ def _indice_bm25(colecao: str) -> tuple[list[Document], IndiceBM25]:
     """Índice BM25 da coleção, montado uma vez com os mesmos chunks que estão no Chroma.
     Se a ingestão rodar com o app aberto, é preciso reiniciar o app (como já é para o Chroma)."""
     if colecao not in _indices:
-        dados = _cliente().get_collection(colecao).get(include=["documents", "metadatas"])
+        cliente = _cliente()
+        if not _existe(cliente, colecao):
+            # Mesma mensagem do vector_store.py; sem isto, o erro vinha do Chroma, em inglês
+            raise RuntimeError(f"A coleção '{colecao}' ainda não existe. Rode antes: python src/rag/ingestao.py")
+        dados = cliente.get_collection(colecao).get(include=["documents", "metadatas"])
         docs = [Document(page_content=t, metadata=m) for t, m in zip(dados["documents"], dados["metadatas"])]
         _indices[colecao] = (docs, IndiceBM25([d.page_content for d in docs]))
     return _indices[colecao]
